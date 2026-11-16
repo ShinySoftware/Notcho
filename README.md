@@ -133,7 +133,7 @@ Changes from the keys or Control Centre flash in the notch.
 ### And
 - **Pin** (⦿) keeps the panel open.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
-- **Settings** (⚙ in the panel) holds the notch size, which tabs show, the teleprompter script, calculator options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
+- **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
 - It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Shiny Notch again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
 
 ## Build and run

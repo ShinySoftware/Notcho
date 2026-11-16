@@ -49,7 +49,6 @@ public sealed class SettingsPage : ContentPage
         var table = new TableView
         {
             BackgroundColor = Ui.Surface,
-            Margin = new Thickness(16, 0, 16, 16),
             CellBackgroundColor = Ui.Raised,
             CellSelectedColor = Ui.Separator,
             CellTitleColor = Ui.Text,
@@ -69,12 +68,19 @@ public sealed class SettingsPage : ContentPage
             SectionSeparatorColor = Ui.Surface
         };
 
+        // The inset goes inside the scroller, not around it: the rows scroll right to the window's edges
+        // (and under its title bar), and the scroll bar runs down the window's own edge. The table has no
+        // inset of its own, so it goes on the stack of rows it scrolls.
+        if (table.Content is ScrollView { Content: Layout rows })
+            rows.Padding = new Thickness(16, 0, 16, 16);
+
         var sections = table.Root.Sections;
         // A pending update comes first, and takes the page's intro as its header.
         if (UpdateSection(updates) is { } update)
             sections.Add(update);
         sections.Add(this.NotchSection(settings));
         sections[0].HeaderView = Intro(sections[0].Title);
+        sections.Add(StandInSection(settings));
         sections.Add(PeekSection(settings));
         sections.Add(TabsSection(settings, notch.AvailableTabs));
         sections.Add(this.TeleprompterSection(settings, prompter));
@@ -108,7 +114,7 @@ public sealed class SettingsPage : ContentPage
 
     TableSection NotchSection(AppSettings settings)
     {
-        var section = Section("Notch", "The size of the closed notch, either side of the camera. Each side still grows to fit what it's showing: what's playing and any system readings on the left; the weather, a countdown or a meeting on the right. At 0 and 0 with nothing to show, it's just the camera.");
+        var section = Section("Notch", "The size of the closed notch, either side of the camera. Each side still grows to fit what it's showing: what's playing and any system readings on the left; the weather, a countdown or a meeting on the right. At 0 and 0 with nothing to show, it's just the camera. Hovering opens the notch once the pointer has rested on it for as long as you set, so passing over it on the way to the menu bar doesn't.");
 
         var sliders = new List<Slider>();
         section.Cells.Add(Switch("Same width both sides", "arrow.left.and.right", Ui.Blue, settings.NotchWidthsLocked, locked =>
@@ -145,10 +151,30 @@ public sealed class SettingsPage : ContentPage
                 slider.Value = 0;
         }));
 
-        section.Cells.Add(Switch("Click the notch to open it", "cursorarrow.click", Ui.Blue, settings.ClickToOpen, v => settings.ClickToOpen = v));
+        section.Cells.Add(Switch("Click the notch to open it", "cursorarrow.click", Ui.Blue, settings.ClickToOpen, v =>
+        {
+            settings.ClickToOpen = v;
+            this.Rebuild();
+        }));
+        // Clicking opens it at once; only hovering waits.
+        if (!settings.ClickToOpen)
+            section.Cells.Add(StepperCell("Hover this long to open", "timer", Ui.Orange, settings.HoverOpenDelay, 0, AppSettings.MaxHoverOpenDelay, 50, "ms", v => settings.HoverOpenDelay = v));
         section.Cells.Add(Switch("Show the new song when it changes", "music.note", Ui.Red, settings.ShowTrackChanges, v => settings.ShowTrackChanges = v));
         section.Cells.Add(Switch("Show volume changes", "speaker.wave.2.fill", Ui.Pink, settings.ShowVolumeHud, v => settings.ShowVolumeHud = v));
         section.Cells.Add(Switch("Show brightness changes", "sun.max.fill", Ui.Yellow, settings.ShowBrightnessHud, v => settings.ShowBrightnessHud = v));
+        return section;
+    }
+
+    /// <summary>
+    /// The stand-in for a camera notch on a display without one. Its sliders show the change on the notch as
+    /// they move, but only there: around a real camera they change nothing.
+    /// </summary>
+    static TableSection StandInSection(AppSettings settings)
+    {
+        var section = Section("Without a Camera Notch", "On a display with no camera notch, such as an external monitor, the closed notch stands in for one. Space for the camera is the gap it leaves where a camera would be: at 0 there's none, and the notch is only as wide as what it shows. Height is how tall it is before any extra height set above. It never gets narrower than the narrowest width, even with nothing to show, so there's always something to hover.");
+        section.Cells.Add(SliderCell("Space for the camera", "arrow.left.and.right", Ui.Teal, settings.StandInCameraWidth, AppSettings.MaxStandInCameraWidth, [], v => settings.StandInCameraWidth = v));
+        section.Cells.Add(SliderCell("Height", "arrow.up.and.down.square", Ui.Purple, settings.StandInCameraHeight, AppSettings.MaxStandInCameraHeight, [], v => settings.StandInCameraHeight = v, AppSettings.MinStandInCameraHeight));
+        section.Cells.Add(SliderCell("Narrowest width", "arrow.left.and.right.square", Ui.Indigo, settings.StandInMinWidth, AppSettings.MaxStandInNotchWidth, [], v => settings.StandInMinWidth = v, AppSettings.MinStandInNotchWidth));
         return section;
     }
 
@@ -608,10 +634,10 @@ public sealed class SettingsPage : ContentPage
         => new() { Title = title, ButtonTextColor = Ui.Blue, Command = new Command(tapped) };
 
     /// <summary>Whole points only, and only on a change: every save re-renders the notch, and a drag sends many.</summary>
-    static CustomCell SliderCell(string title, string symbol, Color tint, double value, double max, List<Slider> sliders, Action<double> changed)
+    static CustomCell SliderCell(string title, string symbol, Color tint, double value, double max, List<Slider> sliders, Action<double> changed, double min = 0)
     {
         var shown = new Label { Text = $"{value:0} pt", TextColor = Ui.Secondary, FontSize = 12, WidthRequest = 44, HorizontalTextAlignment = TextAlignment.End, VerticalOptions = LayoutOptions.Center };
-        var slider = Ui.Slider(0, max, value, 1, tint, Ui.Purple);
+        var slider = Ui.Slider(min, max, value, 1, tint, Ui.Purple);
         slider.WidthRequest = 220;
         var last = Math.Round(value);
         slider.ValueChangedEvent += (_, v) =>

@@ -35,4 +35,17 @@ public interface IPlatformShell
     /// where the platform stacks the window shown last on top.
     /// </summary>
     void RaiseAboveNotch(string windowTitle) { }
+
+    /// <summary>
+    /// Just after the notch's content was swapped for wings of uneven width (see <c>PeekView</c>). The notch
+    /// window is always centred on the camera, so those wings are drawn in a window as wide as the wider one
+    /// on both sides, black over only part of it. Where the old content is frozen into an image that
+    /// collapses with the window (macOS), it collapses to that even width and only then fades, so a panel
+    /// closing onto a narrow side lost that side's extra black after the rest had closed. This trims the
+    /// frozen image in step with the morph instead, down to <paramref name="wings"/>' own outline. Nothing
+    /// to do where no frozen image is left behind.
+    /// </summary>
+    /// <param name="height">The new content's height: where the window's morph is heading.</param>
+    /// <param name="cornerRadius">The wings' bottom corners.</param>
+    void TrimMorphToWings(Views.Wings wings, double height, double cornerRadius) { }
 }

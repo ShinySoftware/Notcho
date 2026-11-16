@@ -34,7 +34,6 @@ public sealed class NotchController
         Hud
     }
 
-    static readonly TimeSpan HoverOpenDelay = TimeSpan.FromMilliseconds(140);
     static readonly TimeSpan HoverCloseDelay = TimeSpan.FromMilliseconds(380);
     static readonly TimeSpan HudDuration = TimeSpan.FromSeconds(1.6);
     /// <summary>How long a finished countdown holds the panel open when nobody is hovering it.</summary>
@@ -291,7 +290,7 @@ public sealed class NotchController
                 else
                     _ = this.RenderAsync();
             }
-            else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight))
+            else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight) or nameof(AppSettings.StandInCameraWidth) or nameof(AppSettings.StandInCameraHeight) or nameof(AppSettings.StandInMinWidth))
                 this.PreviewSize();
             // The panel picks the change up on closing.
             else if (key is nameof(AppSettings.PeekItems) && this.mode == Mode.Peek)
@@ -361,22 +360,24 @@ public sealed class NotchController
     /// </summary>
     double PeekHeight => this.Cutout.Height + this.settings.NotchExtraHeight;
 
-    /// <summary>About a MacBook camera notch's width, for a display that has none.</summary>
-    const double StandInCutoutWidth = 180;
-
     /// <summary>
     /// The camera cut-out the notch is built around. A display without one (an external monitor) gets a
-    /// stand-in of about a MacBook's size, drawn black, so the collapsed notch is always there to hover or
-    /// click: around a real camera the black is the hardware itself, but on a plain screen an empty notch
-    /// would be invisible and a few points wide.
+    /// stand-in, drawn black, the size Settings says (about a MacBook's, unless changed; as wide as nothing at all).
     /// </summary>
     Size Cutout => this.notch.HardwareNotchSize is { Width: > 0, Height: > 0 } hardware
         ? hardware
-        : new Size(StandInCutoutWidth, 32);
+        : new Size(this.settings.StandInCameraWidth, this.settings.StandInCameraHeight);
 
     bool HasHardwareCutout => this.notch.HardwareNotchSize.Width > 0;
 
-    string SizeKey => $"{this.settings.NotchLeftWidth}|{this.settings.NotchRightWidth}|{this.settings.NotchWidthsLocked}|{this.settings.NotchExtraHeight}";
+    /// <summary>
+    /// The narrowest the collapsed notch may be. Around a real camera the black is the hardware itself, but
+    /// on a plain screen the collapsed notch has to stay there to hover or click, so it is never narrower
+    /// than Settings says - even empty, or with a stand-in camera of 0.
+    /// </summary>
+    double PeekMinWidth => this.HasHardwareCutout ? 0 : this.settings.StandInMinWidth;
+
+    string SizeKey => $"{this.settings.NotchLeftWidth}|{this.settings.NotchRightWidth}|{this.settings.NotchWidthsLocked}|{this.settings.NotchExtraHeight}|{this.settings.StandInCameraWidth}|{this.settings.StandInCameraHeight}|{this.settings.StandInMinWidth}";
 
     // ---------------------------------------------------------------------------------------------
     // Hover
@@ -391,7 +392,7 @@ public sealed class NotchController
             if (this.settings.ClickToOpen)
                 return;
 
-            this.dispatcher.DispatchDelayed(HoverOpenDelay, () =>
+            this.dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(this.settings.HoverOpenDelay), () =>
             {
                 if (token == this.hoverToken && this.notch.IsPointerOver && this.mode != Mode.Panel)
                     this.Open(this.tab);
@@ -609,13 +610,15 @@ public sealed class NotchController
                 // Readings coming or going change how often the clock ticks.
                 this.ScheduleTick();
                 await this.notch.SetContentAsync(peek, this.ConfigurePeek);
+                this.TrimMorph(peek);
                 break;
 
             case Mode.Hud:
                 var cutout = this.Cutout;
-                var hud = new HudView(this.hudKind, cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekHeight, this.controls);
+                var hud = new HudView(this.hudKind, cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, this.controls);
                 this.live = hud;
                 await this.notch.SetContentAsync(hud, this.ConfigurePeek);
+                this.TrimMorph(hud);
                 break;
 
             default:
@@ -634,7 +637,17 @@ public sealed class NotchController
         // An empty peek vanishes into a real camera notch; the stand-in has to stay drawn.
         var keepEmpty = this.previewingSize || !this.HasHardwareCutout;
         var items = PeekItemInfo.Shown(this.settings.PeekItems);
-        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekHeight, keepEmpty, items, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
+        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
+    }
+
+    /// <summary>
+    /// Wings of uneven width just went in: the old content, collapsing with the window, should close onto
+    /// their outline rather than the window's even one (see <see cref="IPlatformShell.TrimMorphToWings"/>).
+    /// </summary>
+    void TrimMorph(IWinged? content)
+    {
+        if (content?.Wings is { } wings && (wings.LeftInset > 0 || wings.RightInset > 0))
+            this.shell.TrimMorphToWings(wings, this.PeekHeight, PeekView.CornerRadius);
     }
 
     PanelView BuildPanel()

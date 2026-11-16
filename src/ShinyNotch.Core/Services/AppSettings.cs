@@ -112,6 +112,43 @@ public sealed class AppSettings
         set => this.Set(nameof(this.NotchExtraHeight), Math.Clamp(Math.Round(value), 0, MaxNotchExtraHeight));
     }
 
+    public const double MaxStandInCameraWidth = 240;
+    public const double MinStandInNotchWidth = 40;
+    public const double MinStandInCameraHeight = 24;
+    public const double MaxStandInCameraHeight = 48;
+    public const double MaxStandInNotchWidth = 400;
+
+    /// <summary>
+    /// On a display without a camera notch, the gap the closed notch leaves between its wings where a camera
+    /// would be, in points. About a MacBook's unless changed; at 0 the wings meet, and the notch is only as
+    /// wide as what it shows.
+    /// </summary>
+    public double StandInCameraWidth
+    {
+        get => this.Double(nameof(this.StandInCameraWidth), 180);
+        set => this.Set(nameof(this.StandInCameraWidth), Math.Clamp(Math.Round(value), 0, MaxStandInCameraWidth));
+    }
+
+    /// <summary>
+    /// On a display without a camera notch, how tall the closed notch is before any extra height, in points:
+    /// the stand-in camera's height. Never less than the artwork in the left wing needs.
+    /// </summary>
+    public double StandInCameraHeight
+    {
+        get => this.Double(nameof(this.StandInCameraHeight), 32);
+        set => this.Set(nameof(this.StandInCameraHeight), Math.Clamp(Math.Round(value), MinStandInCameraHeight, MaxStandInCameraHeight));
+    }
+
+    /// <summary>
+    /// On a display without a camera notch, the narrowest the closed notch gets, in points. There's no camera
+    /// for an empty notch to vanish into, so with nothing to show this is what there is to hover.
+    /// </summary>
+    public double StandInMinWidth
+    {
+        get => this.Double(nameof(this.StandInMinWidth), 120);
+        set => this.Set(nameof(this.StandInMinWidth), Math.Clamp(Math.Round(value), MinStandInNotchWidth, MaxStandInNotchWidth));
+    }
+
     /// <summary>
     /// What the closed notch shows, by <c>PeekItem</c> name. What's playing and the weather unless changed;
     /// the system readings only when asked for, since they keep the app sampling every second.
@@ -127,6 +164,18 @@ public sealed class AppSettings
     {
         get => this.Bool(nameof(this.ClickToOpen), false);
         set => this.Set(nameof(this.ClickToOpen), value);
+    }
+
+    public const double MaxHoverOpenDelay = 1500;
+
+    /// <summary>
+    /// How long the pointer has to rest on the notch before hovering opens it, in milliseconds, so passing
+    /// over it on the way to the menu bar doesn't. Leaving before then calls it off.
+    /// </summary>
+    public double HoverOpenDelay
+    {
+        get => this.Double(nameof(this.HoverOpenDelay), 150);
+        set => this.Set(nameof(this.HoverOpenDelay), Math.Clamp(Math.Round(value), 0, MaxHoverOpenDelay));
     }
 
     public bool ShowVolumeHud

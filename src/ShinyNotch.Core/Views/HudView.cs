@@ -6,7 +6,7 @@ namespace ShinyNotch.Views;
 /// The volume / brightness flash: the symbol on one side of the camera, a meter and percentage on the
 /// other. Everything updates in place, so a held key never rebuilds the notch.
 /// </summary>
-sealed class HudView : Grid, ILiveView
+sealed class HudView : Grid, ILiveView, IWinged
 {
     const double IconSize = 14;
     /// <summary>The meter and percentage, and the room either side of them.</summary>
@@ -20,13 +20,17 @@ sealed class HudView : Grid, ILiveView
 
     public HudKind Kind { get; private set; }
 
+    public Wings Wings { get; }
+
     /// <param name="leftWish">The peek's wing widths, so the notch keeps its size; the meter side may need more.</param>
-    public HudView(HudKind kind, double cutoutWidth, double leftWish, double rightWish, bool locked, double height, SystemControlsService controls)
+    /// <param name="minWidth">The peek's narrowest, likewise.</param>
+    public HudView(HudKind kind, double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, SystemControlsService controls)
     {
         this.controls = controls;
         this.HeightRequest = height;
         var (left, right) = PeekView.Widths(leftWish, rightWish, locked, PeekView.EdgeGap + IconSize + 6, MeterWingWidth);
-        var (leftInset, rightInset) = PeekView.Lay(this, cutoutWidth, left, right);
+        this.Wings = PeekView.Lay(this, cutoutWidth, left, right, minWidth);
+        var (leftInset, rightInset, _) = this.Wings;
 
         this.icon = Ui.Symbol("speaker.wave.2.fill", IconSize);
         this.icon.HorizontalOptions = LayoutOptions.Start;
