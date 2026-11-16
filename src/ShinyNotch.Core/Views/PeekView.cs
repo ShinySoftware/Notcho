@@ -47,6 +47,18 @@ public sealed record PeekItemInfo(PeekItem Item, string Name, string Symbol, Col
 }
 
 /// <summary>
+/// Where a winged view (<see cref="PeekView.Lay"/>) draws its black: how far in from each side of the window
+/// it starts, and the window's whole width.
+/// </summary>
+public readonly record struct Wings(double LeftInset, double RightInset, double Width);
+
+/// <summary>Content laid out as wings either side of the camera, black over only the width each wants.</summary>
+interface IWinged
+{
+    Wings Wings { get; }
+}
+
+/// <summary>
 /// The collapsed notch: a "wing" either side of the camera, at the camera's height. Left is what's
 /// playing - the artwork and its bars, in the artwork's colour - then any system readings turned on in
 /// Settings. Right is the countdown, then a meeting that's about to start, then the weather.
@@ -61,7 +73,7 @@ public sealed record PeekItemInfo(PeekItem Item, string Name, string Symbol, Col
 /// <c>ConfigurePeek</c>), and the black is drawn here, over just the wings asked for.
 /// </para>
 /// </remarks>
-sealed class PeekView : Grid, ILiveView
+sealed class PeekView : Grid, ILiveView, IWinged
 {
     readonly CountdownService countdown;
     readonly CalendarService calendar;
@@ -84,9 +96,10 @@ sealed class PeekView : Grid, ILiveView
     const double CameraGap = 6;
     /// <summary>Between a wing's content and the notch's outer edge (the notch itself has no padding).</summary>
     public const double EdgeGap = 12;
-    const double CornerRadius = 12;
+    /// <summary>The black's bottom corners.</summary>
+    public const double CornerRadius = 12;
 
-    PeekView(double cutoutWidth, double leftWidth, double rightWidth, double height, View? left, View? right, Label? rightText, IReadOnlyList<(PeekItem, Label)> readings, bool showWeather, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
+    PeekView(double cutoutWidth, double leftWidth, double rightWidth, double minWidth, double height, View? left, View? right, Label? rightText, IReadOnlyList<(PeekItem, Label)> readings, bool showWeather, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
     {
         this.countdown = countdown;
         this.calendar = calendar;
@@ -98,7 +111,8 @@ sealed class PeekView : Grid, ILiveView
         this.readings = readings;
 
         this.HeightRequest = height;
-        var (leftInset, rightInset) = Lay(this, cutoutWidth, leftWidth, rightWidth);
+        this.Wings = Lay(this, cutoutWidth, leftWidth, rightWidth, minWidth);
+        var (leftInset, rightInset, _) = this.Wings;
 
         if (left != null)
         {
@@ -112,18 +126,26 @@ sealed class PeekView : Grid, ILiveView
         }
     }
 
+    public Wings Wings { get; }
+
     /// <summary>
     /// Lays out a grid of wings either side of the camera: both columns as wide as the wider wing, so the
     /// window stays centred on the camera, and the notch's black drawn over only the width each wing wants.
-    /// Returns how far in from each column's outer edge its wing's black starts - where content should begin.
+    /// Returns where the black is: how far in from each column's outer edge its wing's black starts (where
+    /// content should begin), and the whole width.
     /// </summary>
-    public static (double LeftInset, double RightInset) Lay(Grid grid, double cutoutWidth, double leftWidth, double rightWidth)
+    /// <param name="minWidth">
+    /// The narrowest the black may be. Any shortfall widens the middle, where the camera is (or would be),
+    /// so the wings' content stays at the outer edges.
+    /// </param>
+    public static Wings Lay(Grid grid, double cutoutWidth, double leftWidth, double rightWidth, double minWidth)
     {
         var wing = Math.Max(leftWidth, rightWidth);
+        var middle = Math.Max(Math.Max(cutoutWidth, 8), minWidth - leftWidth - rightWidth);
         grid.ColumnDefinitions =
         [
             new ColumnDefinition(wing),
-            new ColumnDefinition(Math.Max(cutoutWidth, 8)),
+            new ColumnDefinition(middle),
             new ColumnDefinition(wing)
         ];
 
@@ -137,7 +159,7 @@ sealed class PeekView : Grid, ILiveView
             Margin = new Thickness(leftInset, 0, rightInset, 0),
             InputTransparent = true
         }.At(columnSpan: 3));
-        return (leftInset, rightInset);
+        return new Wings(leftInset, rightInset, wing + middle + wing);
     }
 
     /// <summary>Shows system readings, so it wants ticking every second.</summary>
@@ -148,7 +170,8 @@ sealed class PeekView : Grid, ILiveView
     /// <paramref name="preview"/>, when an empty one is shown: so a size being changed in Settings can be seen,
     /// or on a display without a camera notch, where the black stand-in is all there is to hover.
     /// </summary>
-    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double height, bool preview, IReadOnlySet<PeekItem> items, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
+    /// <param name="minWidth">The narrowest the notch may be (see <see cref="Lay"/>); 0 around a real camera.</param>
+    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
     {
         double leftNeeds = 0, rightNeeds = 0;
 
@@ -215,7 +238,7 @@ sealed class PeekView : Grid, ILiveView
             return null;
 
         var (leftWidth, rightWidth) = Widths(leftWish, rightWish, locked, leftNeeds, rightNeeds);
-        return new PeekView(cutoutWidth, leftWidth, rightWidth, height, left, right, rightText, readings, showWeather, countdown, calendar, weather, stats, time);
+        return new PeekView(cutoutWidth, leftWidth, rightWidth, minWidth, height, left, right, rightText, readings, showWeather, countdown, calendar, weather, stats, time);
     }
 
     /// <summary>

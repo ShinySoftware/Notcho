@@ -9,6 +9,9 @@ namespace ShinyNotch;
 
 public static class ShinyNotchHosting
 {
+    /// <summary>How long the notch takes to reshape, in milliseconds.</summary>
+    public const double MorphDuration = 260;
+
     /// <summary>
     /// The notch, its window and everything shared behind it. The head registers the Platform
     /// implementations, an <see cref="ICalendarStore"/> (Shiny.Calendar has none for plain net11.0) and
@@ -28,7 +31,7 @@ public static class ShinyNotchHosting
                     // Room for the widest and tallest teleprompter Settings allows; every other tab is 640 wide.
                     o.MaxWidth = AppSettings.MaxTeleprompterWidth + 40;
                     o.MaxHeight = 760;
-                    o.MorphDuration = 260;
+                    o.MorphDuration = MorphDuration;
                     // Without a hardware notch, hang from the top of the usable area (under the menu bar or a
                     // top taskbar) instead of floating an island below it, out of the way of what's on screen.
                     // A notched screen already gets this shape.
