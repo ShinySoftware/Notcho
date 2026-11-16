@@ -77,6 +77,8 @@ public sealed class NotchController
     HudKind hudKind;
     ILiveView? live;
     string? shownKey;
+    /// <summary>What the open panel's neck was built from (see <see cref="BuildNeck"/>).</summary>
+    string? neckKey;
     bool dragging;
     /// <summary>The drag carries an app the platform can trust, so the tray shows a target for that too.</summary>
     bool draggingApp;
@@ -551,15 +553,27 @@ public sealed class NotchController
     {
         if (this.mode == Mode.Peek || (this.mode == Mode.Panel && this.tab == tab))
             _ = this.RenderAsync();
+        else
+            this.RefreshNeck();
+    }
+
+    /// <summary>The open panel hangs from the closed notch, so it follows what that would show now.</summary>
+    void RefreshNeck()
+    {
+        if (this.mode == Mode.Panel && this.live is PanelView panel && this.PeekKey != this.neckKey)
+            panel.Neck = this.BuildNeck();
     }
 
     string Key() => this.mode switch
     {
-        Mode.Peek => $"peek|{this.SizeKey}|{this.previewingSize}|{String.Join(',', this.settings.PeekItems)}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}",
+        Mode.Peek => $"peek|{this.previewingSize}|{this.PeekKey}",
         Mode.Hud => $"hud|{this.SizeKey}",
         // Panels are rebuilt on every structural change, and those are rare.
         _ => $"panel|{this.tab}|{Guid.NewGuid()}"
     };
+
+    /// <summary>Everything the closed notch is built from.</summary>
+    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
 
     /// <summary>
     /// Renders the current state. One render at a time: asking during one queues another, which renders
@@ -670,10 +684,25 @@ public sealed class NotchController
             _ => new PrompterTab(this.prompter, () => this.OpenSettings?.Invoke())
         };
 
-        var cutout = this.Cutout;
         var controls = new ControlsBar(this.media, this.controls, showPlay: this.tab != NotchTab.Media);
         var width = this.tab == NotchTab.Prompter ? this.prompter.Width : Ui.PanelWidth;
-        return new PanelView(this.tab, this.ShownTabs, body, controls, width, cutout.Width, Math.Max(cutout.Height, 32), this.pinnedByUser, this.Open, this.TogglePin, () => this.OpenSettings?.Invoke());
+        return new PanelView(this.tab, this.ShownTabs, this.BuildNeck(), body, controls, width, this.pinnedByUser, this.Open, this.TogglePin, () => this.OpenSettings?.Invoke());
+    }
+
+    /// <summary>
+    /// What the open panel hangs from: the closed notch as it is, so opening never widens what's in the
+    /// menu bar, squared off at the bottom where the panel carries on. With nothing to peek at, just the camera.
+    /// </summary>
+    View BuildNeck()
+    {
+        this.neckKey = this.PeekKey;
+        if (this.BuildPeek() is { } peek)
+        {
+            peek.JoinPanel();
+            return peek;
+        }
+
+        return new BoxView { Color = Colors.Black, WidthRequest = Math.Max(this.Cutout.Width, 8), HeightRequest = this.PeekHeight };
     }
 
     TrayTab BuildTray()
@@ -707,10 +736,14 @@ public sealed class NotchController
         view.CornerRadius = 12;
     }
 
-    /// <summary>The panel starts in the camera band too (its tab strip lives there).</summary>
+    /// <summary>
+    /// The panel draws its own black (see <see cref="PanelView"/>), so either side of the neck it hangs
+    /// from, over the menu bar, the window is see-through.
+    /// </summary>
     void ConfigurePanel(NotchView view)
     {
-        view.ContentPadding = new Thickness(14, 0, 14, 16);
+        view.ContentPadding = new Thickness(0);
+        view.SurfaceColor = Colors.Transparent;
         view.CornerRadius = 22;
     }
 
@@ -726,6 +759,7 @@ public sealed class NotchController
     bool NeedsSeconds =>
         this.countdown.IsRunning ||
         (this.mode == Mode.Peek && this.live is PeekView { ShowsReadings: true }) ||
+        (this.mode == Mode.Panel && this.live is PanelView { Neck: PeekView { ShowsReadings: true } }) ||
         (this.mode == Mode.Panel && this.tab switch
         {
             NotchTab.Media => this.media.Current?.IsPlaying == true,
@@ -790,6 +824,7 @@ public sealed class NotchController
         // The peek re-renders when what it would show has changed - a meeting coming within 15 minutes.
         if (this.mode == Mode.Peek && this.Key() != this.shownKey)
             _ = this.RenderAsync();
+        this.RefreshNeck();
     }
 
     static DateTimeOffset NextMinute(DateTimeOffset now)

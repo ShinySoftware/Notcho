@@ -76,6 +76,7 @@ interface IWinged
 sealed class PeekView : Grid, ILiveView, IWinged
 {
     readonly CountdownService countdown;
+    readonly Border black;
     readonly CalendarService calendar;
     readonly WeatherService weather;
     readonly TimeProvider time;
@@ -111,7 +112,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
         this.readings = readings;
 
         this.HeightRequest = height;
-        this.Wings = Lay(this, cutoutWidth, leftWidth, rightWidth, minWidth);
+        this.Wings = Lay(this, cutoutWidth, leftWidth, rightWidth, minWidth, out this.black);
         var (leftInset, rightInset, _) = this.Wings;
 
         if (left != null)
@@ -128,6 +129,9 @@ sealed class PeekView : Grid, ILiveView, IWinged
 
     public Wings Wings { get; }
 
+    /// <summary>Hung above the open panel (see <see cref="PanelView"/>): the black runs on into it, so it has no bottom corners.</summary>
+    public void JoinPanel() => this.black.StrokeShape = new RoundRectangle { CornerRadius = 0 };
+
     /// <summary>
     /// Lays out a grid of wings either side of the camera: both columns as wide as the wider wing, so the
     /// window stays centred on the camera, and the notch's black drawn over only the width each wing wants.
@@ -138,7 +142,8 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// The narrowest the black may be. Any shortfall widens the middle, where the camera is (or would be),
     /// so the wings' content stays at the outer edges.
     /// </param>
-    public static Wings Lay(Grid grid, double cutoutWidth, double leftWidth, double rightWidth, double minWidth)
+    /// <param name="black">The black, for a caller that reshapes it later.</param>
+    public static Wings Lay(Grid grid, double cutoutWidth, double leftWidth, double rightWidth, double minWidth, out Border black)
     {
         var wing = Math.Max(leftWidth, rightWidth);
         var middle = Math.Max(Math.Max(cutoutWidth, 8), minWidth - leftWidth - rightWidth);
@@ -151,14 +156,15 @@ sealed class PeekView : Grid, ILiveView, IWinged
 
         var leftInset = wing - leftWidth;
         var rightInset = wing - rightWidth;
-        grid.Children.Add(new Border
+        black = new Border
         {
             BackgroundColor = Colors.Black,
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 0, CornerRadius, CornerRadius) },
             Margin = new Thickness(leftInset, 0, rightInset, 0),
             InputTransparent = true
-        }.At(columnSpan: 3));
+        };
+        grid.Children.Add(black.At(columnSpan: 3));
         return new Wings(leftInset, rightInset, wing + middle + wing);
     }
 

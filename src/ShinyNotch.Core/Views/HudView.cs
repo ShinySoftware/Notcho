@@ -29,7 +29,7 @@ sealed class HudView : Grid, ILiveView, IWinged
         this.controls = controls;
         this.HeightRequest = height;
         var (left, right) = PeekView.Widths(leftWish, rightWish, locked, PeekView.EdgeGap + IconSize + 6, MeterWingWidth);
-        this.Wings = PeekView.Lay(this, cutoutWidth, left, right, minWidth);
+        this.Wings = PeekView.Lay(this, cutoutWidth, left, right, minWidth, out _);
         var (leftInset, rightInset, _) = this.Wings;
 
         this.icon = Ui.Symbol("speaker.wave.2.fill", IconSize);
