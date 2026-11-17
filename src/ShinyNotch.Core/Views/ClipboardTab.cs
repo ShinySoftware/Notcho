@@ -12,6 +12,7 @@ sealed class ClipboardTab : VerticalStackLayout
     /// <summary>Rows shown before the list scrolls, so a long history doesn't push the panel off the screen.</summary>
     const int RowsBeforeScrolling = 7;
     const double RowHeight = 30;
+    const int RowsPerBatch = 8;
 
     public ClipboardTab(ClipboardService clipboard, TimeProvider time)
     {
@@ -45,9 +46,31 @@ sealed class ClipboardTab : VerticalStackLayout
 
         var now = time.GetUtcNow();
         var current = clipboard.CurrentId;
+        // A screenful now, and the rest a batch at a time once the tab shows: the history runs to 50 rows,
+        // and building them all before the tab appeared held a tab switch up by half a second. The list
+        // is already its scrolling height, so the later rows don't resize the panel.
         var rows = new VerticalStackLayout { Spacing = 0 };
-        foreach (var item in list)
+        foreach (var item in list.Take(RowsBeforeScrolling + 1))
             rows.Children.Add(Row(clipboard, item, item.Id == current, now));
+
+        var rest = list.Skip(RowsBeforeScrolling + 1).ToList();
+        void AddRest(int from)
+        {
+            // Switched away before the history was all in.
+            if (!this.IsLoaded)
+                return;
+            foreach (var item in rest.Skip(from).Take(RowsPerBatch))
+                rows.Children.Add(Row(clipboard, item, item.Id == current, now));
+            if (from + RowsPerBatch < rest.Count)
+                this.Dispatcher.Dispatch(() => AddRest(from + RowsPerBatch));
+        }
+        void OnLoaded(object? sender, EventArgs e)
+        {
+            this.Loaded -= OnLoaded;
+            this.Dispatcher.Dispatch(() => AddRest(0));
+        }
+        if (rest.Count > 0)
+            this.Loaded += OnLoaded;
 
         View content = rows;
         if (list.Count > RowsBeforeScrolling)

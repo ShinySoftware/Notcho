@@ -7,19 +7,21 @@ namespace ShinyNotch.Views;
 
 /// <summary>
 /// The week across the top with today in red and the picked day ringed, then what's left of today and
-/// tomorrow - or, with another day picked, everything on that day.
+/// tomorrow - or, with another day picked, everything on that day. With access, + adds an event on the
+/// picked day.
 /// </summary>
 sealed class CalendarTab : VerticalStackLayout
 {
     const int MaxShown = 5;
 
-    public CalendarTab(CalendarService calendar, TimeProvider time, IPlatformShell shell, Action rebuild)
+    /// <param name="addEvent">Opens the new event form on a day.</param>
+    public CalendarTab(CalendarService calendar, TimeProvider time, IPlatformShell shell, Action rebuild, Action<DateTime> addEvent)
     {
         this.Spacing = 8;
         var now = time.GetLocalNow().DateTime;
 
         var selected = calendar.SelectedDate ?? now.Date;
-        this.Children.Add(Week(now, selected, date => _ = calendar.SelectAsync(date)));
+        this.Children.Add(Week(now, selected, date => _ = calendar.SelectAsync(date), calendar.IsAuthorized ? () => addEvent(selected) : null));
 
         if (!calendar.IsAuthorized)
         {
@@ -105,7 +107,8 @@ sealed class CalendarTab : VerticalStackLayout
     /// Seven days from Sunday (or the culture's first day) around the picked day. Today's date is red,
     /// the picked one sits in a filled circle; arrows step a week either way.
     /// </summary>
-    static View Week(DateTime now, DateTime selected, Action<DateTime> select)
+    /// <param name="add">Adds an event; null without access to the calendar.</param>
+    static View Week(DateTime now, DateTime selected, Action<DateTime> select, Action? add)
     {
         var first = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
         var start = selected.AddDays(-(((int)selected.DayOfWeek - (int)first + 7) % 7));
@@ -153,7 +156,7 @@ sealed class CalendarTab : VerticalStackLayout
         var header = new Grid
         {
             ColumnSpacing = 2,
-            ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)],
+            ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)],
             Children =
             {
                 Ui.Caption(selected.ToString("MMMM yyyy"), Ui.Red).At(column: 0),
@@ -161,6 +164,8 @@ sealed class CalendarTab : VerticalStackLayout
                 Ui.SymbolButton("chevron.right", () => select(selected.AddDays(7)), 11, Ui.Secondary, "Next week", padding: new Thickness(6, 2)).At(column: 3)
             }
         };
+        if (add != null)
+            header.Children.Add(Ui.SymbolButton("plus", add, 12, Ui.Red, "New event", padding: new Thickness(6, 2)).At(column: 4));
         if (selected != now.Date)
         {
             var back = Ui.Caption("Today", Ui.Red);

@@ -5,7 +5,10 @@ namespace ShinyNotch.Services;
 
 public sealed record CalendarItem(string Title, DateTime Start, DateTime End, bool AllDay, Color Color, string? Location);
 
-/// <summary>Upcoming events from every calendar the user has, through Shiny.Calendar.</summary>
+/// <summary>A calendar a new event can go in.</summary>
+public sealed record WritableCalendar(string Id, string Name, Color Color);
+
+/// <summary>Upcoming events from every calendar the user has, and new ones added, through Shiny.Calendar.</summary>
 [Singleton]
 public sealed class CalendarService
 {
@@ -15,8 +18,13 @@ public sealed class CalendarService
     readonly IDispatcher dispatcher;
     readonly TimeProvider time;
     int refreshVersion;
+    /// <summary>
+    /// Access was asked for and given. Windows can't say whether it has been without asking again (it
+    /// reports Unknown), so a grant is remembered here.
+    /// </summary>
+    bool granted;
 
-    public bool IsAuthorized => this.store.GetCurrentAccess() == AccessState.Available;
+    public bool IsAuthorized => this.granted || this.store.GetCurrentAccess() == AccessState.Available;
 
     public bool IsDenied => this.store.GetCurrentAccess() is AccessState.Denied or AccessState.Restricted;
 
@@ -65,10 +73,11 @@ public sealed class CalendarService
 
         try
         {
-            var granted = await this.store.RequestAccess(CalendarAccessType.ReadOnly).ConfigureAwait(true) == AccessState.Available;
-            if (granted)
+            // Read and write: events can be added from the Calendar tab.
+            this.granted = await this.store.RequestAccess(CalendarAccessType.ReadWrite).ConfigureAwait(true) == AccessState.Available;
+            if (this.granted)
                 await this.RefreshAsync().ConfigureAwait(true);
-            return granted;
+            return this.granted;
         }
         catch
         {
@@ -114,6 +123,54 @@ public sealed class CalendarService
         }
 
         this.Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// The calendars a new event can go in. None on Windows: an app may only write to calendars it made
+    /// itself, so new events go into the app's own (see <see cref="AddEventAsync"/>).
+    /// </summary>
+    public async Task<IReadOnlyList<WritableCalendar>> GetWritableCalendarsAsync()
+    {
+        if (!this.IsAuthorized || OperatingSystem.IsWindows())
+            return [];
+
+        try
+        {
+            var calendars = await this.store.GetAll().ConfigureAwait(true);
+            return calendars
+                .Where(c => !c.IsReadOnly && c.Id is not null)
+                .Select(c => new WritableCalendar(c.Id!, c.Name, ToColor(c.Color)))
+                .OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Adds an event, to <paramref name="calendarId"/> or, when null, wherever the system puts new events
+    /// (on Windows, a calendar of the app's own). All day runs midnight to midnight of
+    /// <paramref name="start"/>'s day. Throws when the store won't take it.
+    /// </summary>
+    public async Task AddEventAsync(string title, string? location, DateTime start, DateTime end, bool allDay, string? calendarId)
+    {
+        if (allDay)
+        {
+            start = start.Date;
+            end = start.AddDays(1);
+        }
+
+        await this.store.CreateEvent(new CalendarEvent(title, new DateTimeOffset(start), new DateTimeOffset(end))
+        {
+            Location = String.IsNullOrWhiteSpace(location) ? null : location,
+            IsAllDay = allDay,
+            CalendarId = calendarId
+        }).ConfigureAwait(true);
+
+        // The store's own change notice comes too, but not on every platform.
+        await this.RefreshAsync().ConfigureAwait(true);
     }
 
     async Task<Dictionary<string, Color>> GetColorsAsync()

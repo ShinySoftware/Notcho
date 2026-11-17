@@ -63,6 +63,7 @@ public sealed class NotchController
     readonly VoiceNotesService notes;
     readonly TasksService tasks;
     readonly TaskEntry taskEntry;
+    readonly EventEntry eventEntry;
     readonly ClipboardService clipboard;
     readonly CalculatorService calculator;
     readonly bool hasMirror;
@@ -97,6 +98,10 @@ public sealed class NotchController
     int screensToken;
     int previewToken;
     bool previewingSize;
+    /// <summary>The display changed: an open panel is built again rather than switched in place.</summary>
+    bool reseat;
+    /// <summary>Whether the open panel's controls carry a play button (see <see cref="ShowIn"/>); null before any.</summary>
+    bool? controlsShowPlay;
 
     public NotchController(
         INotchWindowService notch,
@@ -114,6 +119,7 @@ public sealed class NotchController
         VoiceNotesService notes,
         TasksService tasks,
         TaskEntry taskEntry,
+        EventEntry eventEntry,
         ClipboardService clipboard,
         CalculatorService calculator,
         IEnumerable<MirrorSupport> mirror,
@@ -138,6 +144,7 @@ public sealed class NotchController
         this.notes = notes;
         this.tasks = tasks;
         this.taskEntry = taskEntry;
+        this.eventEntry = eventEntry;
         this.clipboard = clipboard;
         this.calculator = calculator;
         this.hasMirror = mirror.Any();
@@ -176,7 +183,7 @@ public sealed class NotchController
     }
 
     /// <summary>The notch should stay open even when the pointer leaves.</summary>
-    bool IsPinned => this.pinnedByUser || this.dragging || this.prompter.IsRunning || this.prompter.IsListening || this.notes.IsRecording || this.taskEntry.IsOpen;
+    bool IsPinned => this.pinnedByUser || this.dragging || this.prompter.IsRunning || this.prompter.IsListening || this.notes.IsRecording || this.taskEntry.IsOpen || this.eventEntry.IsOpen;
 
     public async Task StartAsync()
     {
@@ -265,6 +272,7 @@ public sealed class NotchController
         this.clipboard.Changed += (_, _) => this.Rebuild(NotchTab.Clipboard);
         this.calculator.Changed += (_, _) => this.Rebuild(NotchTab.Calculator);
         // Typing a task holds the panel open behind the popup; done typing, it closes as usual.
+        // One popup serves both (see EntryWindow), so this hears either closing.
         this.taskEntry.Closed += (_, _) => this.ScheduleClose();
         this.notes.Changed += (_, _) =>
         {
@@ -330,6 +338,7 @@ public sealed class NotchController
                 return;
 
             this.shownKey = null;
+            this.reseat = true;
             await this.RenderAsync();
             await this.notch.ShowAsync();
         });
@@ -636,11 +645,25 @@ public sealed class NotchController
                 break;
 
             default:
-                var panel = this.BuildPanel();
-                this.live = panel;
-                await this.notch.SetContentAsync(panel, this.ConfigurePanel);
-                // A fresh teleprompter starts at the top; take it back to where the script is.
-                (panel.Body as PrompterTab)?.Scroll();
+                var body = this.BuildBody();
+                // Already open: switch in place (see PanelView.Show) - unless the display changed, when the
+                // notch has to be built again around the new camera.
+                if (this.live is PanelView open && !this.reseat)
+                {
+                    this.ShowIn(open, body);
+                }
+                else
+                {
+                    var panel = new PanelView(this.BuildNeck(), this.Open, this.TogglePin, () => this.OpenSettings?.Invoke());
+                    this.controlsShowPlay = null;
+                    this.ShowIn(panel, body);
+                    this.live = panel;
+                    await this.notch.SetContentAsync(panel, this.ConfigurePanel);
+                }
+                this.reseat = false;
+                // A fresh teleprompter starts at the top; take it back to where the script is, once it's laid out.
+                if (body is PrompterTab prompterTab)
+                    WhenLoaded(prompterTab, prompterTab.Scroll);
                 break;
         }
     }
@@ -664,16 +687,45 @@ public sealed class NotchController
             this.shell.TrimMorphToWings(wings, this.PeekHeight, PeekView.CornerRadius);
     }
 
-    PanelView BuildPanel()
+    /// <summary>
+    /// Puts the current tab into a panel. The controls are only built again when the play button comes or
+    /// goes (the Media tab has its own), so a tab switch leaves their sliders alone.
+    /// </summary>
+    void ShowIn(PanelView panel, View body)
     {
-        View body = this.tab switch
+        var showPlay = this.tab != NotchTab.Media;
+        var controls = showPlay != this.controlsShowPlay ? new ControlsBar(this.media, this.controls, showPlay) : null;
+        this.controlsShowPlay = showPlay;
+        var width = this.tab == NotchTab.Prompter ? this.prompter.Width : Ui.PanelWidth;
+        panel.Show(this.tab, this.ShownTabs, body, controls, width, this.pinnedByUser);
+    }
+
+    static void WhenLoaded(View view, Action action)
+    {
+        if (view.IsLoaded)
+        {
+            view.Dispatcher.Dispatch(action);
+            return;
+        }
+
+        void OnLoaded(object? sender, EventArgs e)
+        {
+            view.Loaded -= OnLoaded;
+            view.Dispatcher.Dispatch(action);
+        }
+        view.Loaded += OnLoaded;
+    }
+
+    View BuildBody()
+    {
+        return this.tab switch
         {
             NotchTab.Media => new MediaTab(this.media),
             NotchTab.Weather => new WeatherTab(this.weather, () => this.OpenSettings?.Invoke()),
             NotchTab.Tray => this.BuildTray(),
             NotchTab.Stats => new StatsTab(this.stats),
             NotchTab.Processes => new ProcessesTab(this.processes),
-            NotchTab.Calendar => new CalendarTab(this.calendar, this.time, this.shell, () => _ = this.RenderAsync()),
+            NotchTab.Calendar => new CalendarTab(this.calendar, this.time, this.shell, () => _ = this.RenderAsync(), this.eventEntry.Show),
             NotchTab.Timer => new TimerTab(this.countdown),
             NotchTab.Capture when this.capture != null => this.capture.Build(this.FoldAway),
             NotchTab.Mirror => new MirrorTab(this.settings, this.tray, this.cameraControls),
@@ -683,10 +735,6 @@ public sealed class NotchController
             NotchTab.Calculator => new CalculatorTab(this.calculator, this.settings),
             _ => new PrompterTab(this.prompter, () => this.OpenSettings?.Invoke())
         };
-
-        var controls = new ControlsBar(this.media, this.controls, showPlay: this.tab != NotchTab.Media);
-        var width = this.tab == NotchTab.Prompter ? this.prompter.Width : Ui.PanelWidth;
-        return new PanelView(this.tab, this.ShownTabs, this.BuildNeck(), body, controls, width, this.pinnedByUser, this.Open, this.TogglePin, () => this.OpenSettings?.Invoke());
     }
 
     /// <summary>

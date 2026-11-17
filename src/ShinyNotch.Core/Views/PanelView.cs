@@ -54,80 +54,133 @@ public sealed record NotchTabInfo(NotchTab Tab, string Symbol, string Name)
 sealed class PanelView : Grid, ILiveView, IDisposable
 {
     const double TabSymbol = 16;
+    const double TabText = 12;
+    const double TabTextGap = 6;
     const double CornerRadius = 22;
     /// <summary>The curves the neck's sides flare out on into the panel's top edge.</summary>
     const double FlareRadius = 12;
 
-    readonly double width;
+    readonly Action<NotchTab> select;
+    readonly Action togglePin;
+    readonly Action openSettings;
     // Concave: black in the corner between the neck's side and the panel's top, cut away by a quarter circle.
     readonly Path leftFlare = Flare($"M {FlareRadius},0 L {FlareRadius},{FlareRadius} L 0,{FlareRadius} A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},0 Z", LayoutOptions.Start);
     readonly Path rightFlare = Flare($"M 0,0 A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},{FlareRadius} L 0,{FlareRadius} Z", LayoutOptions.End);
-    View neck;
-
-    public View Body { get; }
-
-    public ControlsBar Controls { get; }
-
-    /// <param name="tabs">The tabs to show: the ones this platform has and Settings hasn't turned off.</param>
-    /// <param name="neck">What the panel hangs from: the collapsed notch, or just the camera.</param>
-    /// <param name="width">The panel's width: <see cref="Ui.PanelWidth"/>, unless the tab asks for more.</param>
-    public PanelView(NotchTab selected, IReadOnlyList<NotchTabInfo> tabs, View neck, View body, ControlsBar controls, double width, bool pinned, Action<NotchTab> select, Action togglePin, Action openSettings)
+    readonly Grid card = new()
     {
-        this.Body = body;
-        this.Controls = controls;
-        this.width = width;
+        RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)],
+        RowSpacing = 10,
+        Padding = new Thickness(Ui.PanelPadding / 2, 8, Ui.PanelPadding / 2, 16)
+    };
+    readonly Border surface;
+    double width;
+    View neck;
+    View? strip;
+
+    public View Body { get; private set; } = null!;
+
+    public ControlsBar Controls { get; private set; } = null!;
+
+    /// <param name="neck">What the panel hangs from: the collapsed notch, or just the camera.</param>
+    public PanelView(View neck, Action<NotchTab> select, Action togglePin, Action openSettings)
+    {
         this.neck = neck;
+        this.select = select;
+        this.togglePin = togglePin;
+        this.openSettings = openSettings;
         this.RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)];
         this.Children.Add(this.leftFlare.At(row: 0));
         this.Children.Add(this.rightFlare.At(row: 0));
+        this.Children.Add(this.neck.At(row: 0));
+
+        // The neck runs straight on into the top edge, so the top corners are the closed notch's.
+        this.surface = new Border
+        {
+            BackgroundColor = Colors.Black,
+            StrokeThickness = 0,
+            StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(PeekView.CornerRadius, PeekView.CornerRadius, CornerRadius, CornerRadius) },
+            HorizontalOptions = LayoutOptions.Center,
+            Content = this.card
+        };
+        this.Children.Add(this.surface.At(row: 1));
+    }
+
+    /// <summary>
+    /// Shows a tab, in place. Switching tabs swaps only the strip and the body (and the controls, when
+    /// given): the notch around them stays, and reshapes to the new size by itself. Rebuilding the whole
+    /// notch instead meant a new window page every time, which took a few hundred milliseconds.
+    /// </summary>
+    /// <param name="tabs">The tabs to show: the ones this platform has and Settings hasn't turned off.</param>
+    /// <param name="width">The panel's width: <see cref="Ui.PanelWidth"/>, unless the tab asks for more.</param>
+    /// <param name="controls">New controls, or null to keep the ones showing.</param>
+    public void Show(NotchTab selected, IReadOnlyList<NotchTabInfo> tabs, View body, ControlsBar? controls, double width, bool pinned)
+    {
+        this.width = width;
+        this.surface.WidthRequest = width;
         this.Fit();
 
-        // Buttons share the room across the panel: the more there are, the less padding each gets. The
-        // symbols stay full size.
-        var count = tabs.Count + 2;
-        var inset = Math.Clamp(Math.Floor(((width - Ui.PanelPadding) / count - Ui.SymbolBox(TabSymbol)) / 2), 1, 6);
+        this.Replace(this.strip, this.strip = this.Strip(selected, tabs, width, pinned), 0);
+        this.Replace(this.Body, this.Body = body, 1);
+        if (controls != null)
+            this.Replace(this.Controls, this.Controls = controls, 2);
+    }
 
-        // The selected tab sits on a pill; the pin only changes colour, since it's a switch, not a place.
-        // The others are secondary grey, not tertiary: on black, tertiary was too faint to find.
-        View Tab(string symbol, Action tapped, bool on, string hint, Color? onColor = null, bool pill = true)
-            => Ui.SymbolButton(symbol, tapped, TabSymbol, on ? onColor ?? Ui.Text : Ui.Secondary, hint, on && pill ? Ui.Raised : null, padding: new Thickness(inset, 4));
+    void Replace(View? old, View now, int row)
+    {
+        if (old != null)
+            this.card.Children.Remove(old);
+        this.card.Children.Add(now.At(row: row));
+    }
+
+    View Strip(NotchTab selected, IReadOnlyList<NotchTabInfo> tabs, double width, bool pinned)
+    {
+        // Buttons share the room across the panel, less the selected tab's name: the more there are, the
+        // less padding each gets. The symbols stay full size.
+        var count = tabs.Count + 2;
+        var name = tabs.FirstOrDefault(t => t.Tab == selected)?.Name;
+        var nameWidth = name != null ? Math.Ceiling(Ui.Platform.TextWidth(name, TabText, bold: true)) + TabTextGap : 0;
+        var inset = Math.Clamp(Math.Floor(((width - Ui.PanelPadding - nameWidth) / count - Ui.SymbolBox(TabSymbol)) / 2), 1, 6);
+
+        // The pin only changes colour, since it's a switch, not a place. The others are secondary grey, not
+        // tertiary: on black, tertiary was too faint to find.
+        View Tab(string symbol, Action tapped, bool on, string hint, Color? onColor = null)
+            => Ui.SymbolButton(symbol, tapped, TabSymbol, on ? onColor ?? Ui.Text : Ui.Secondary, hint, padding: new Thickness(inset, 4));
+
+        // The selected tab sits on a pill with its name beside the symbol, so the strip says where you are.
+        View Selected(NotchTabInfo t)
+        {
+            var label = Ui.Label(t.Name, TabText, bold: true);
+            label.VerticalOptions = LayoutOptions.Center;
+            var row = new HorizontalStackLayout { Spacing = TabTextGap, Children = { Ui.Symbol(t.Symbol, TabSymbol, Ui.Text), label } };
+            var pill = new Border
+            {
+                AutomationId = t.Name,
+                StrokeThickness = 0,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                BackgroundColor = Ui.Raised,
+                Padding = new Thickness(Math.Max(inset, 8), 4),
+                VerticalOptions = LayoutOptions.Center,
+                Content = row
+            };
+            return pill.Pressable(() => this.select(t.Tab));
+        }
 
         // No spacing: up to sixteen buttons have to fit across.
         var left = new HorizontalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Center };
         foreach (var t in tabs)
         {
             var tab = t.Tab;
-            left.Children.Add(Tab(t.Symbol, () => select(tab), tab == selected, t.Name));
+            left.Children.Add(tab == selected ? Selected(t) : Tab(t.Symbol, () => this.select(tab), false, t.Name));
         }
 
         var right = new HorizontalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Center };
-        right.Children.Add(Tab(pinned ? "pin.fill" : "pin", togglePin, pinned, pinned ? "Unpin" : "Keep open", Ui.Orange, pill: false));
-        right.Children.Add(Tab("gearshape.fill", openSettings, false, "Settings"));
+        right.Children.Add(Tab(pinned ? "pin.fill" : "pin", this.togglePin, pinned, pinned ? "Unpin" : "Keep open", Ui.Orange));
+        right.Children.Add(Tab("gearshape.fill", this.openSettings, false, "Settings"));
 
         var strip = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)] };
         strip.Children.Add(left.At(column: 0));
         strip.Children.Add(right.At(column: 1));
-
-        var card = new Grid
-        {
-            RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)],
-            RowSpacing = 10,
-            Padding = new Thickness(Ui.PanelPadding / 2, 8, Ui.PanelPadding / 2, 16)
-        };
-        card.Children.Add(strip.At(row: 0));
-        card.Children.Add(body.At(row: 1));
-        card.Children.Add(controls.At(row: 2));
-
-        // The neck runs straight on into the top edge, so the top corners are the closed notch's.
-        this.Children.Add(new Border
-        {
-            BackgroundColor = Colors.Black,
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(PeekView.CornerRadius, PeekView.CornerRadius, CornerRadius, CornerRadius) },
-            WidthRequest = width,
-            HorizontalOptions = LayoutOptions.Center,
-            Content = card
-        }.At(row: 1));
+        return strip;
     }
 
     /// <summary>
@@ -141,6 +194,7 @@ sealed class PanelView : Grid, ILiveView, IDisposable
         {
             this.Children.Remove(this.neck);
             this.neck = value;
+            this.Children.Add(this.neck.At(row: 0));
             this.Fit();
         }
     }
@@ -152,7 +206,6 @@ sealed class PanelView : Grid, ILiveView, IDisposable
     void Fit()
     {
         this.neck.HorizontalOptions = LayoutOptions.Center;
-        this.Children.Add(this.neck.At(row: 0));
         var wings = this.neck is IWinged winged ? winged.Wings : new Wings(0, 0, this.neck.WidthRequest);
         var whole = Math.Max(this.width, wings.Width);
         this.WidthRequest = whole;
