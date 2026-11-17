@@ -52,14 +52,18 @@ Builds are on the [Releases](https://github.com/ShinySoftware/ShinyNotch/release
 
 ### Peek
 
-While collapsed, the notch shows a "wing" either side of the camera:
-- **Left:** what's playing: the artwork, and bars in the artwork's colour (flat when paused).
-- **Right:** a running timer, a meeting starting in the next 15 minutes, or the weather where you are, in that order.
+While collapsed, the notch shows a "wing" either side of the camera. From the left edge round to the right:
+- what's playing: the artwork, and bars in the artwork's colour (flat when paused);
+- any music buttons you've turned on (previous, play/pause, next);
+- any system readings you've turned on (CPU, GPU, memory, network, disk);
+- last, at the right edge: a running timer, a meeting starting in the next 15 minutes, or the weather where you are, in that order.
 
-With nothing to show, the notch disappears into the camera housing.
+They're split across the camera so the two wings come out as even as they can, so one side never gets crowded while the other sits empty. With nothing to show, the notch disappears into the camera housing.
+
+The music buttons are there when **Click the notch to open it** is on (Settings ▸ Notch). With hovering, the notch would open before you could reach them. Clicking a button never opens the notch, and skipping to the next song doesn't pop Now Playing open.
 
 ### Now Playing
-Artwork, title, a scrubber and previous/play/next for Apple Music and Spotify, on a card tinted with the artwork's colour.
+Artwork, title, a scrubber and previous/play/next for Apple Music and Spotify, on a card tinted with the artwork's colour. Skipping keeps a playing song playing.
 
 <img src="docs/screenshots/media.png" width="668" alt="Now Playing tab" />
 
@@ -185,14 +189,15 @@ rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src
 | [Microsoft.Maui.Controls](https://www.nuget.org/packages/Microsoft.Maui.Controls) | 10.0.100 | The UI framework |
 | [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | .NET MAUI on native AppKit (`net10.0-macos`), not Mac Catalyst |
 | [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | MAUI Essentials for the AppKit head |
-| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 6.3.1-beta-0001 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
-| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 6.3.1-beta-0001 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
-| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 2.0.0-beta-0010 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
-| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 2.0.0-beta-0010 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
-| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 2.0.0-beta-0010 | `CameraView` for the mirror: preview, looks, camera choice and photos |
-| [Shiny.Audio](https://www.nuget.org/packages/Shiny.Audio) | 3.0.0-beta | Voice notes: recording from a chosen microphone, and playback |
-| [Shiny.Extensions.Stores](https://www.nuget.org/packages/Shiny.Extensions.Stores) | 6.0.1 | Settings, on NSUserDefaults (a settings file on other platforms) |
-| [Shiny.Extensions.DependencyInjection](https://www.nuget.org/packages/Shiny.Extensions.DependencyInjection) | 6.0.1 | `[Singleton]`-attributed services, registered by a source generator |
+| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 6.6.0 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
+| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 6.6.0 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
+| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 2.5.0 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
+| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 2.5.0 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
+| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 2.5.0 | `CameraView` for the mirror: preview, looks, camera choice and photos |
+| [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 2.5.0 | The mirror's QR reader: spots a web link in view and offers to open it |
+| [Shiny.Audio](https://www.nuget.org/packages/Shiny.Audio) | 3.0.0 | Voice notes: recording from a chosen microphone, and playback |
+| [Shiny.Extensions.Stores](https://www.nuget.org/packages/Shiny.Extensions.Stores) | 6.0.2 | Settings, on NSUserDefaults (a settings file on other platforms) |
+| [Shiny.Extensions.DependencyInjection](https://www.nuget.org/packages/Shiny.Extensions.DependencyInjection) | 6.0.2 | `[Singleton]`-attributed services, registered by a source generator |
 | [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | Debug builds only: UI inspection and automation |
 
 | Apple framework / service | Used for |
