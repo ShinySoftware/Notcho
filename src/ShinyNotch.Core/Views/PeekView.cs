@@ -83,10 +83,11 @@ interface IWinged
 }
 
 /// <summary>
-/// The collapsed notch: a "wing" either side of the camera, at the camera's height. Left is what's
-/// playing - the artwork and its bars, in the artwork's colour, and any music buttons asked for - then any
-/// system readings turned on in Settings. Right is the countdown, then a meeting that's about to start,
-/// then the weather.
+/// The collapsed notch: a "wing" either side of the camera, at the camera's height. In order from the left
+/// edge round to the right: what's playing (the artwork and its bars, in the artwork's colour), any music
+/// buttons asked for, any system readings turned on in Settings, and last the countdown, a meeting that's
+/// about to start, or the weather. They're split across the camera so the two wings come out as even as
+/// they can (see <see cref="Balance"/>).
 /// </summary>
 /// <remarks>
 /// Each wing is the width asked for in Settings or what its content needs, whichever is more - so a wing
@@ -208,27 +209,24 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// <param name="pressed">A music button was clicked, before it acts - so the notch can tell it from a click on itself.</param>
     public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
     {
-        double leftNeeds = 0, rightNeeds = 0;
-
-        // Each part of the left wing with its width, which together (and the gaps) are what the wing needs.
-        var parts = new HorizontalStackLayout
-        {
-            Spacing = WingSpacing,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Start,
-            Margin = new Thickness(EdgeGap, 0, 0, 0)
-        };
-        double partsWidth = 0;
-        void Add(View part, double width)
-        {
-            partsWidth += (parts.Count > 0 ? WingSpacing : 0) + width;
-            parts.Add(part);
-        }
+        // Every part with its width, in order from the left wing's outer edge round to the right wing's.
+        var parts = new List<(View View, double Width)>();
+        void Add(View part, double width) => parts.Add((part, width));
 
         if (items.Contains(PeekItem.Music) && media.Current is { } now)
         {
-            Add(Ui.Artwork(media.Artwork, ArtworkSize, 6), ArtworkSize);
-            Add(MusicBars.Create(now.TrackKey, now.IsPlaying, media.ArtworkColor ?? Ui.Text, BarsWidth, 14), BarsWidth);
+            // The artwork and its bars are one part: they shouldn't be split across the camera.
+            var music = new HorizontalStackLayout
+            {
+                Spacing = WingSpacing,
+                VerticalOptions = LayoutOptions.Center,
+                Children =
+                {
+                    Ui.Artwork(media.Artwork, ArtworkSize, 6),
+                    MusicBars.Create(now.TrackKey, now.IsPlaying, media.ArtworkColor ?? Ui.Text, BarsWidth, 14)
+                }
+            };
+            Add(music, ArtworkSize + WingSpacing + BarsWidth);
         }
 
         if (buttons.Count > 0 && media.Current is { } track)
@@ -252,36 +250,70 @@ sealed class PeekView : Grid, ILiveView, IWinged
             }
         }
 
-        View? left = null;
-        if (parts.Count > 0)
-        {
-            leftNeeds = Math.Ceiling(EdgeGap + partsWidth + CameraGap);
-            left = parts;
-        }
-
+        // The countdown, a meeting or the weather always ends the right wing, at its outer edge.
         var showWeather = items.Contains(PeekItem.Weather);
-        View? right = null;
         Label? rightText = null;
         if (Right(countdown, calendar, weather, showWeather, time) is { } r)
         {
-            rightNeeds = Math.Ceiling(CameraGap + RightTextSize + RightSpacing + TextWidth(r.Text) + EdgeGap);
             rightText = Ui.Label(r.Text, RightTextSize, bold: true, color: r.Color);
-            rightText.HorizontalOptions = LayoutOptions.End;
-            right = new HorizontalStackLayout
+            var status = new HorizontalStackLayout
             {
                 Spacing = RightSpacing,
-                HorizontalOptions = LayoutOptions.End,
                 VerticalOptions = LayoutOptions.Center,
-                Margin = new Thickness(0, 0, EdgeGap, 0),
                 Children = { r.Multicolor ? Ui.Symbol(r.Symbol, 12, multicolor: true) : Ui.Symbol(r.Symbol, 11, r.Color), rightText }
             };
+            Add(status, RightTextSize + RightSpacing + TextWidth(r.Text));
         }
 
-        if (left == null && right == null && !preview)
+        if (parts.Count == 0 && !preview)
             return null;
+
+        var split = Balance(parts.Select(p => p.Width).ToList(), rightText != null);
+        var left = Wing(parts.Take(split).ToList(), LayoutOptions.Start, out var leftContent);
+        var right = Wing(parts.Skip(split).ToList(), LayoutOptions.End, out var rightContent);
+        var leftNeeds = left != null ? Math.Ceiling(EdgeGap + leftContent + CameraGap) : 0;
+        var rightNeeds = right != null ? Math.Ceiling(CameraGap + rightContent + EdgeGap) : 0;
 
         var (leftWidth, rightWidth) = Widths(leftWish, rightWish, locked, leftNeeds, rightNeeds);
         return new PeekView(cutoutWidth, leftWidth, rightWidth, minWidth, height, left, right, rightText, readings, showWeather, countdown, calendar, weather, stats, time);
+    }
+
+    /// <summary>
+    /// How many of the parts go in the left wing, the rest going right: whichever split leaves the wider wing
+    /// narrowest, so neither side is crowded while the other sits empty. A tie keeps more on the left, where
+    /// the parts start.
+    /// </summary>
+    /// <param name="keepLast">The last part (the countdown, a meeting or the weather) stays on the right.</param>
+    public static int Balance(IReadOnlyList<double> widths, bool keepLast)
+    {
+        double Side(int from, int to) => to <= from ? 0 : widths.Skip(from).Take(to - from).Sum() + WingSpacing * (to - from - 1);
+
+        var most = keepLast ? widths.Count - 1 : widths.Count;
+        var best = most;
+        var bestWidest = double.MaxValue;
+        for (var split = most; split >= 0; split--)
+        {
+            var widest = Math.Max(Side(0, split), Side(split, widths.Count));
+            if (widest < bestWidest)
+            {
+                best = split;
+                bestWidest = widest;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>A wing's parts in a row, or null with none; <paramref name="width"/> is what they take up.</summary>
+    static HorizontalStackLayout? Wing(IReadOnlyList<(View View, double Width)> parts, LayoutOptions align, out double width)
+    {
+        width = parts.Sum(p => p.Width) + WingSpacing * Math.Max(0, parts.Count - 1);
+        if (parts.Count == 0)
+            return null;
+
+        var row = new HorizontalStackLayout { Spacing = WingSpacing, VerticalOptions = LayoutOptions.Center, HorizontalOptions = align };
+        foreach (var part in parts)
+            row.Add(part.View);
+        return row;
     }
 
     /// <summary>One music button. Play/pause shows what a click would do; the peek is rebuilt when that changes.</summary>

@@ -106,9 +106,20 @@ sealed class MacNowPlayingService : INowPlayingService, IDisposable
     }
 
     public void PlayPause() => this.Command("playpause");
-    public void Next() => this.Command("next track");
-    public void Previous() => this.Command("previous track");
+    public void Next() => this.Skip("next track");
+    public void Previous() => this.Skip("previous track");
     public void Seek(double seconds) => this.Command($"set player position to {Math.Max(0, seconds).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}");
+
+    /// <summary>
+    /// Moves to another track. A player can stop on a skip (Music, on a streamed track), so a song that was
+    /// playing is played again if it did; one that was paused stays paused.
+    /// </summary>
+    void Skip(string verb)
+    {
+        if (this.Current is { IsPlaying: true })
+            verb += "\nif player state is not playing then play";
+        this.Command(verb);
+    }
 
     void Command(string verb)
     {
@@ -116,7 +127,7 @@ sealed class MacNowPlayingService : INowPlayingService, IDisposable
             return;
 
         if (PlayerNamed(now.Player) is { } player)
-            this.Run(player, $"tell application \"{now.Player}\" to {verb}", 2)?.Dispose();
+            this.Run(player, $"tell application \"{now.Player}\"\n{verb}\nend tell", 2)?.Dispose();
         this.Refresh();
     }
 
