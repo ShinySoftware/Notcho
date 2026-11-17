@@ -159,6 +159,21 @@ public sealed class SettingsPage : ContentPage
         // Clicking opens it at once; only hovering waits.
         if (!settings.ClickToOpen)
             section.Cells.Add(StepperCell("Hover this long to open", "timer", Ui.Orange, settings.HoverOpenDelay, 0, AppSettings.MaxHoverOpenDelay, 50, "ms", v => settings.HoverOpenDelay = v));
+        // Buttons on the closed notch only work when hovering doesn't open it first.
+        if (settings.ClickToOpen)
+        {
+            foreach (var info in PeekMusicButtonInfo.All)
+            {
+                var name = info.Button.ToString();
+                section.Cells.Add(Switch($"{info.Name} button on the closed notch", info.Symbol, Ui.Red, settings.PeekMusicButtons.Contains(name), on =>
+                {
+                    var buttons = settings.PeekMusicButtons.Where(b => b != name).ToList();
+                    if (on)
+                        buttons.Add(name);
+                    settings.PeekMusicButtons = buttons;
+                }));
+            }
+        }
         section.Cells.Add(Switch("Show the new song when it changes", "music.note", Ui.Red, settings.ShowTrackChanges, v => settings.ShowTrackChanges = v));
         section.Cells.Add(Switch("Show volume changes", "speaker.wave.2.fill", Ui.Pink, settings.ShowVolumeHud, v => settings.ShowVolumeHud = v));
         section.Cells.Add(Switch("Show brightness changes", "sun.max.fill", Ui.Yellow, settings.ShowBrightnessHud, v => settings.ShowBrightnessHud = v));

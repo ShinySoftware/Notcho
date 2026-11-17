@@ -45,6 +45,10 @@ public sealed class NotchController
     static readonly TimeSpan CalendarRefreshEvery = TimeSpan.FromMinutes(15);
     /// <summary>A display change arrives as a burst of notifications; act once it settles.</summary>
     static readonly TimeSpan ScreensSettleDelay = TimeSpan.FromMilliseconds(400);
+    /// <summary>A click on the notch this soon after one of its music buttons was the same click, not a second one.</summary>
+    static readonly TimeSpan ButtonClickGuard = TimeSpan.FromMilliseconds(400);
+    /// <summary>A new song this soon after the notch's own next or previous was asked for, so it doesn't pop the panel open.</summary>
+    static readonly TimeSpan ButtonTrackChangeGuard = TimeSpan.FromSeconds(3);
     /// <summary>How long the notch stays out, even with nothing to show, after its size is changed in Settings.</summary>
     static readonly TimeSpan SizePreviewHold = TimeSpan.FromSeconds(2.5);
 
@@ -102,6 +106,8 @@ public sealed class NotchController
     bool reseat;
     /// <summary>Whether the open panel's controls carry a play button (see <see cref="ShowIn"/>); null before any.</summary>
     bool? controlsShowPlay;
+    /// <summary>When a music button on the closed notch was last clicked.</summary>
+    DateTimeOffset musicButtonPressedAt = DateTimeOffset.MinValue;
 
     public NotchController(
         INotchWindowService notch,
@@ -303,7 +309,7 @@ public sealed class NotchController
             else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight) or nameof(AppSettings.StandInCameraWidth) or nameof(AppSettings.StandInCameraHeight) or nameof(AppSettings.StandInMinWidth))
                 this.PreviewSize();
             // The panel picks the change up on closing.
-            else if (key is nameof(AppSettings.PeekItems) && this.mode == Mode.Peek)
+            else if (key is nameof(AppSettings.PeekItems) or nameof(AppSettings.PeekMusicButtons) or nameof(AppSettings.ClickToOpen) && this.mode == Mode.Peek)
                 _ = this.RenderAsync();
         };
 
@@ -415,12 +421,31 @@ public sealed class NotchController
         }
     }
 
-    /// <summary>With click to open, a click on the peek (or a HUD) opens the panel. Hovering opens it otherwise.</summary>
+    /// <summary>
+    /// With click to open, a click on the peek (or a HUD) opens the panel. Hovering opens it otherwise.
+    /// </summary>
+    /// <remarks>
+    /// The surface's click can also hear a click on a music button inside it, before or after the button does,
+    /// depending on the platform. So it waits a turn of the main loop for the button to speak up first.
+    /// </remarks>
     void OnTapped()
     {
-        if (this.settings.ClickToOpen && this.mode != Mode.Panel)
-            this.Open(this.tab);
+        if (!this.settings.ClickToOpen || this.mode == Mode.Panel)
+            return;
+
+        this.dispatcher.Dispatch(() =>
+        {
+            if (this.time.GetUtcNow() - this.musicButtonPressedAt >= ButtonClickGuard && this.mode != Mode.Panel)
+                this.Open(this.tab);
+        });
     }
+
+    void OnMusicButtonPressed() => this.musicButtonPressedAt = this.time.GetUtcNow();
+
+    /// <summary>The music buttons the closed notch shows: none unless it opens on a click.</summary>
+    IReadOnlySet<PeekMusicButton> PeekButtons => this.settings.ClickToOpen
+        ? PeekMusicButtonInfo.Shown(this.settings.PeekMusicButtons)
+        : new HashSet<PeekMusicButton>();
 
     void ScheduleClose(TimeSpan? delay = null)
     {
@@ -532,6 +557,9 @@ public sealed class NotchController
             return;
         if (!this.settings.ShowTrackChanges || this.mode == Mode.Panel)
             return;
+        // Skipped from the closed notch's own buttons: the point of those is not opening it.
+        if (this.time.GetUtcNow() - this.musicButtonPressedAt < ButtonTrackChangeGuard)
+            return;
 
         var before = this.tab;
         this.Open(NotchTab.Media);
@@ -582,7 +610,7 @@ public sealed class NotchController
     };
 
     /// <summary>Everything the closed notch is built from.</summary>
-    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
+    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{String.Join(',', this.PeekButtons.Order())}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
 
     /// <summary>
     /// Renders the current state. One render at a time: asking during one queues another, which renders
@@ -674,7 +702,7 @@ public sealed class NotchController
         // An empty peek vanishes into a real camera notch; the stand-in has to stay drawn.
         var keepEmpty = this.previewingSize || !this.HasHardwareCutout;
         var items = PeekItemInfo.Shown(this.settings.PeekItems);
-        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
+        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.PeekButtons, this.OnMusicButtonPressed, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
     }
 
     /// <summary>

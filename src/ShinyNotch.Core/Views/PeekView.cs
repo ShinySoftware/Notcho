@@ -18,6 +18,30 @@ public enum PeekItem
     DiskWrite
 }
 
+/// <summary>A music control on the closed notch, turned on or off in Settings (click to open only).</summary>
+public enum PeekMusicButton
+{
+    Previous,
+    PlayPause,
+    Next
+}
+
+/// <summary>A closed-notch music button as Settings and the notch show it.</summary>
+public sealed record PeekMusicButtonInfo(PeekMusicButton Button, string Name, string Symbol)
+{
+    /// <summary>Every button, in Settings' order and the notch's.</summary>
+    public static readonly IReadOnlyList<PeekMusicButtonInfo> All =
+    [
+        new(PeekMusicButton.Previous, "Previous", "backward.fill"),
+        new(PeekMusicButton.PlayPause, "Play / pause", "playpause.fill"),
+        new(PeekMusicButton.Next, "Next", "forward.fill")
+    ];
+
+    /// <summary>The buttons turned on, from the names Settings keeps. A name no longer known is skipped.</summary>
+    public static IReadOnlySet<PeekMusicButton> Shown(IEnumerable<string> names)
+        => names.Select(n => Enum.TryParse<PeekMusicButton>(n, out var button) ? button : (PeekMusicButton?)null).OfType<PeekMusicButton>().ToHashSet();
+}
+
 /// <summary>A closed-notch item as Settings and the notch show it.</summary>
 /// <param name="Tag">
 /// The short name a percentage goes by in the notch ("CPU 23%"). Null for a rate, which goes by its symbol.
@@ -60,8 +84,9 @@ interface IWinged
 
 /// <summary>
 /// The collapsed notch: a "wing" either side of the camera, at the camera's height. Left is what's
-/// playing - the artwork and its bars, in the artwork's colour - then any system readings turned on in
-/// Settings. Right is the countdown, then a meeting that's about to start, then the weather.
+/// playing - the artwork and its bars, in the artwork's colour, and any music buttons asked for - then any
+/// system readings turned on in Settings. Right is the countdown, then a meeting that's about to start,
+/// then the weather.
 /// </summary>
 /// <remarks>
 /// Each wing is the width asked for in Settings or what its content needs, whichever is more - so a wing
@@ -93,6 +118,8 @@ sealed class PeekView : Grid, ILiveView, IWinged
     const double ReadingTagSize = 9;
     const double ReadingSymbolSize = 10;
     const double ReadingSpacing = 3;
+    const double MusicButtonSize = 11;
+    static readonly Thickness MusicButtonPadding = new(5, 4);
     /// <summary>Kept clear between a wing's content and the camera.</summary>
     const double CameraGap = 6;
     /// <summary>Between a wing's content and the notch's outer edge (the notch itself has no padding).</summary>
@@ -177,7 +204,9 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// or on a display without a camera notch, where the black stand-in is all there is to hover.
     /// </summary>
     /// <param name="minWidth">The narrowest the notch may be (see <see cref="Lay"/>); 0 around a real camera.</param>
-    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
+    /// <param name="buttons">The music buttons to show while there's a track; empty unless the notch opens on a click.</param>
+    /// <param name="pressed">A music button was clicked, before it acts - so the notch can tell it from a click on itself.</param>
+    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
     {
         double leftNeeds = 0, rightNeeds = 0;
 
@@ -200,6 +229,14 @@ sealed class PeekView : Grid, ILiveView, IWinged
         {
             Add(Ui.Artwork(media.Artwork, ArtworkSize, 6), ArtworkSize);
             Add(MusicBars.Create(now.TrackKey, now.IsPlaying, media.ArtworkColor ?? Ui.Text, BarsWidth, 14), BarsWidth);
+        }
+
+        if (buttons.Count > 0 && media.Current is { } track)
+        {
+            var row = new HorizontalStackLayout { VerticalOptions = LayoutOptions.Center };
+            foreach (var info in PeekMusicButtonInfo.All.Where(b => buttons.Contains(b.Button)))
+                row.Add(MusicButton(info.Button, track.IsPlaying, media, pressed));
+            Add(row, row.Count * (Ui.SymbolBox(MusicButtonSize) + MusicButtonPadding.HorizontalThickness));
         }
 
         var readings = new List<(PeekItem, Label)>();
@@ -245,6 +282,22 @@ sealed class PeekView : Grid, ILiveView, IWinged
 
         var (leftWidth, rightWidth) = Widths(leftWish, rightWish, locked, leftNeeds, rightNeeds);
         return new PeekView(cutoutWidth, leftWidth, rightWidth, minWidth, height, left, right, rightText, readings, showWeather, countdown, calendar, weather, stats, time);
+    }
+
+    /// <summary>One music button. Play/pause shows what a click would do; the peek is rebuilt when that changes.</summary>
+    static Border MusicButton(PeekMusicButton button, bool playing, INowPlayingService media, Action pressed)
+    {
+        var (symbol, hint, act) = button switch
+        {
+            PeekMusicButton.Previous => ("backward.fill", "Previous", (Action)media.Previous),
+            PeekMusicButton.Next => ("forward.fill", "Next", media.Next),
+            _ => (playing ? "pause.fill" : "play.fill", "Play or pause", media.PlayPause)
+        };
+        return Ui.SymbolButton(symbol, () =>
+        {
+            pressed();
+            act();
+        }, MusicButtonSize, Ui.Text, hint, padding: MusicButtonPadding);
     }
 
     /// <summary>

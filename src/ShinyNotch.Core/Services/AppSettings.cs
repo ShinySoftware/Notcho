@@ -166,6 +166,16 @@ public sealed class AppSettings
         set => this.Set(nameof(this.ClickToOpen), value);
     }
 
+    /// <summary>
+    /// The music buttons on the closed notch, by <c>PeekMusicButton</c> name. None unless asked for, and only
+    /// shown with <see cref="ClickToOpen"/>: with hovering, the notch would open before they could be clicked.
+    /// </summary>
+    public IReadOnlyList<string> PeekMusicButtons
+    {
+        get => this.List(nameof(this.PeekMusicButtons)) ?? [];
+        set => this.Set(nameof(this.PeekMusicButtons), value.Distinct().ToArray());
+    }
+
     public const double MaxHoverOpenDelay = 1500;
 
     /// <summary>
