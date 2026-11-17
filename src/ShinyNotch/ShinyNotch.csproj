@@ -62,7 +62,7 @@
         <PackageReference Include="Shiny.Extensions.Stores" />
         <PackageReference Include="Shiny.Maui.Controls" />
         <PackageReference Include="Shiny.Maui.Controls.Camera" />
-        <PackageReference Include="Shiny.Maui.Controls.Camera.Barcode" />
+        <PackageReference Include="Shiny.Maui.Controls.Analysis.Barcode" />
         <PackageReference Include="Shiny.Maui.Controls.Desktop" />
         <PackageReference Include="Shiny.Speech" />
     </ItemGroup>

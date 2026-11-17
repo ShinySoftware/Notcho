@@ -1,7 +1,8 @@
 using RoundRectangle = Microsoft.Maui.Controls.Shapes.RoundRectangle;
+using Shiny.Controls.Analysis;
 using Shiny.Controls.Camera;
+using Shiny.Maui.Controls.Analysis.Barcode;
 using Shiny.Maui.Controls.Camera;
-using Shiny.Maui.Controls.Camera.Barcode;
 using ShinyNotch.Platform;
 using ShinyNotch.Services;
 using Slider = Shiny.Maui.Controls.Slider;
