@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shiny Notch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Shiny Notch turns the camera notch on your MacBook into a live panel: music, weather, timers, files, notes and more, one hover away.">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress" aria-hidden="true"></div>
+
+<!-- The site header is a macOS menu bar; the notch in its middle is a working copy of the app -->
+<header class="menubar" id="menubar">
+  <div class="mb-left">
+    <a class="mb-brand" href="#top" aria-label="Shiny Notch home">
+      <img src="assets/icon.png" alt="" width="18" height="18">
+      <b>Shiny Notch</b>
+    </a>
+    <nav class="mb-nav" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#gallery">Screenshots</a>
+      <a href="#power">How it works</a>
+      <a href="#shiny">Open source</a>
+    </nav>
+  </div>
+  <div class="mb-right">
+    <span class="mb-status" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="16" height="16"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="19.5" r="1.5" fill="currentColor"/></svg>
+      <span class="mb-battery"><i></i></span>
+    </span>
+    <span class="mb-clock" id="mbClock">Mon 9:41</span>
+    <a class="mb-cta" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">Download</a>
+  </div>
+</header>
+
+<!-- The notch clone. app.js renders the peek, the panel and the HUD into it. -->
+<div class="notch-wrap" id="notchWrap">
+  <div class="notch" id="notch" tabindex="0" role="region" aria-label="Shiny Notch, a working copy. Hover or tap to open.">
+    <div class="notch-layer peek" id="peekLayer"></div>
+    <div class="notch-layer panel" id="panelLayer"></div>
+    <div class="notch-layer hud" id="hudLayer"></div>
+    <div class="drop-glow" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="dim" aria-hidden="true"></div>
+<div id="flash" aria-hidden="true"></div>
+
+<main id="top">
+
+  <!-- HERO: the desktop -->
+  <section class="hero" id="hero">
+    <div class="aurora" aria-hidden="true">
+      <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="spot" aria-hidden="true"></div>
+
+    <div class="hint" id="hint" aria-hidden="true">
+      <svg viewBox="0 0 60 60" width="44" height="44"><path d="M30 54 C 18 40, 18 22, 30 8 M30 8 l-8 9 M30 8 l8 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>hover the notch</span>
+    </div>
+
+    <div class="hero-inner">
+      <p class="eyebrow reveal"><span class="pulse-dot"></span>For MacBooks with a camera notch · macOS 14+</p>
+      <h1 class="hero-title" id="heroTitle">Put your notch<br><em>to work.</em></h1>
+      <p class="hero-sub reveal">Shiny Notch turns the black strip around your camera into a live panel: what's playing, the weather, timers, files, notes, your calendar and more, one hover away. The notch at the top of this page works. Go on, try it.</p>
+      <div class="hero-ctas reveal">
+        <a class="btn btn-primary magnetic" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download for macOS
+        </a>
+        <button class="btn btn-ghost" type="button" data-open-tab="media">Open the notch</button>
+      </div>
+      <p class="hero-meta reveal">Free · Signed and notarized · Updates itself · Also for Windows and Linux</p>
+    </div>
+
+    <!-- Desktop props: drag a file onto the notch, flash the HUD -->
+    <div class="desk" aria-label="Desktop">
+      <div class="desk-files" id="deskFiles"></div>
+      <div class="keys reveal" aria-label="Try the volume and brightness keys">
+        <span class="keys-label">Try the keys</span>
+        <button class="key" type="button" data-key="bright-down" aria-label="Brightness down"><span class="key-ic" data-ic="sun-dim"></span><small>F1</small></button>
+        <button class="key" type="button" data-key="bright-up" aria-label="Brightness up"><span class="key-ic" data-ic="sun"></span><small>F2</small></button>
+        <button class="key" type="button" data-key="vol-down" aria-label="Volume down"><span class="key-ic" data-ic="volume-1"></span><small>F11</small></button>
+        <button class="key" type="button" data-key="vol-up" aria-label="Volume up"><span class="key-ic" data-ic="volume-2"></span><small>F12</small></button>
+      </div>
+    </div>
+    <p class="desk-tip reveal">Drag a file from the desktop onto the notch to shelve it. Copy any text on this page and it lands in the Clipboard tab.</p>
+  </section>
+
+  <!-- Marquee of every tab -->
+  <section class="ticker" aria-label="Every tab">
+    <div class="ticker-track" id="ticker"></div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Fourteen tabs, one hover</p>
+        <h2>Everything you glance at,<br>right under the camera.</h2>
+        <p class="lede">Each card opens that tab in the notch above, so you can try it here instead of reading about it. Turn off the tabs you don't use in Settings and the rest spread out.</p>
+      </div>
+
+      <div class="bento" id="bento">
+        <article class="card c-media tilt reveal" data-tab="media">
+          <div class="viz viz-media" aria-hidden="true">
+            <div class="vm-art"></div>
+            <div class="vm-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <h3>Now Playing</h3>
+          <p>Artwork, title, a scrubber and previous, play and next for Apple Music and Spotify, on a card tinted with the artwork's colour.</p>
+          <button class="try" type="button" data-open-tab="media">Play something <span>↑</span></button>
+        </article>
+
+        <article class="card c-weather tilt reveal" data-tab="weather">
+          <div class="viz viz-weather" aria-hidden="true">
+            <div class="vw-temp">11°</div>
+            <div class="vw-rows">
+              <div><span>Today</span><b style="--l:8%;--r:62%"><i></i></b></div>
+              <div><span>Thu</span><b style="--l:30%;--r:88%"></b></div>
+              <div><span>Fri</span><b style="--l:14%;--r:66%"></b></div>
+            </div>
+          </div>
+          <h3>Weather</h3>
+          <p>Like the iOS widget: now, the next twelve hours and the week. Add cities in Settings and switch with ‹ ›. Tap the temperature to flip °C and °F.</p>
+          <button class="try" type="button" data-open-tab="weather">Check the forecast <span>↑</span></button>
+        </article>
+
+        <article class="card c-peek tilt reveal">
+          <div class="viz viz-peek" aria-hidden="true">
+            <div class="vp-notch">
+              <span class="vp-art"></span><span class="vp-bars"><i></i><i></i><i></i><i></i></span>
+              <span class="vp-cam"></span>
+              <span class="vp-right" id="vpRight">☀︎ 11°</span>
+            </div>
+          </div>
+          <h3>The peek</h3>
+          <p>Closed, the notch shows a wing either side of the camera: what's playing on the left; a running timer, a meeting in the next 15 minutes or the weather on the right. With nothing to show, it disappears into the camera.</p>
+        </article>
+
+        <article class="card c-tray tilt reveal" data-tab="tray">
+          <div class="viz viz-tray" aria-hidden="true">
+            <span class="vt-file f1">PDF</span><span class="vt-file f2">JPG</span><span class="vt-file f3">ZIP</span>
+            <span class="vt-shelf"></span>
+          </div>
+          <h3>File Tray</h3>
+          <p>Drop files on the notch to shelve them. Copy them back out (⌘V in Finder pastes them), AirDrop them, reveal or open them.</p>
+          <button class="try" type="button" data-open-tab="tray">Open the tray <span>↑</span></button>
+        </article>
+
+        <article class="card c-stats tilt reveal" data-tab="stats">
+          <div class="viz viz-stats" aria-hidden="true">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="vr-bg"/><circle cx="60" cy="60" r="50" class="vr r1"/><circle cx="60" cy="60" r="36" class="vr-bg"/><circle cx="60" cy="60" r="36" class="vr r2"/><circle cx="60" cy="60" r="22" class="vr-bg"/><circle cx="60" cy="60" r="22" class="vr r3"/></svg>
+          </div>
+          <h3>System</h3>
+          <p>CPU, GPU and memory as rings, the last 24 seconds of CPU, and network and disk rates. Updated once a second, only while the tab is open.</p>
+          <button class="try" type="button" data-open-tab="stats">See the rings <span>↑</span></button>
+        </article>
+
+        <article class="card c-timer tilt reveal" data-tab="timer">
+          <div class="viz viz-timer" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="vt-bg"/><circle cx="50" cy="50" r="42" class="vt-ring"/></svg><b>4:59</b></div>
+          <h3>Timer</h3>
+          <p>A ring that drains as the countdown runs. It shows in the peek, then chimes and opens when it's done.</p>
+          <button class="try" type="button" data-open-tab="timer">Start a timer <span>↑</span></button>
+        </article>
+
+        <article class="card small tilt reveal" data-tab="tasks">
+          <span class="badge" style="--c:#30D158" data-ic="list-checks"></span>
+          <h3>Tasks</h3>
+          <p>Check one off and it's struck through, then cleared away a day later.</p>
+          <button class="try" type="button" data-open-tab="tasks">Add a task <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="clipboard">
+          <span class="badge" style="--c:#64D2FF" data-ic="clipboard-list"></span>
+          <h3>Clipboard</h3>
+          <p>What you copied lately. Click to copy it again, pin the ones you reuse. Concealed passwords are never kept.</p>
+          <button class="try" type="button" data-open-tab="clipboard">See your copies <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="calendar">
+          <span class="badge" style="--c:#FF453A" data-ic="calendar-days"></span>
+          <h3>Calendar</h3>
+          <p>The rest of today and tomorrow, from every calendar you have. Add an event without leaving the notch.</p>
+          <button class="try" type="button" data-open-tab="calendar">Open the week <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="mirror">
+          <span class="badge" style="--c:#BF5AF2" data-ic="square-user"></span>
+          <h3>Mirror</h3>
+          <p>Your camera, flipped the way a mirror is. Step through looks and take a photo straight into the tray.</p>
+          <button class="try" type="button" data-open-tab="mirror">Check your hair <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="notes">
+          <span class="badge" style="--c:#FF375F" data-ic="audio-lines"></span>
+          <h3>Voice Notes</h3>
+          <p>One click to record, with a timer and level meter. Play them back or drop them in the tray.</p>
+          <button class="try" type="button" data-open-tab="notes">Record a note <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="prompter">
+          <span class="badge" style="--c:#FFD60A" data-ic="align-left"></span>
+          <h3>Teleprompter</h3>
+          <p>Your script scrolls right under the lens, so you read while looking at the camera.</p>
+          <button class="try" type="button" data-open-tab="prompter">Roll the script <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="calculator">
+          <span class="badge" style="--c:#FF9F0A" data-ic="calculator"></span>
+          <h3>Calculator</h3>
+          <p>× and ÷ before + and −, in decimals, so 0.1 + 0.2 is 0.3. Recent sums sit beside the keypad.</p>
+          <button class="try" type="button" data-open-tab="calculator">Do some sums <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="processes">
+          <span class="badge" style="--c:#5E5CE6" data-ic="layers"></span>
+          <h3>Processes</h3>
+          <p>Your ten busiest processes, sortable by CPU, memory, disk or network. Force quit in two clicks.</p>
+          <button class="try" type="button" data-open-tab="processes">Find the hog <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="capture">
+          <span class="badge" style="--c:#0A84FF" data-ic="scan"></span>
+          <h3>Capture</h3>
+          <p>One-click shortcuts into macshot: area, screen, scrolling, text and recording. The notch folds away first.</p>
+          <button class="try" type="button" data-open-tab="capture">Grab the screen <span>↑</span></button>
+        </article>
+        <article class="card c-hud tilt reveal">
+          <div class="viz viz-hud" aria-hidden="true">
+            <div class="vh-notch"><span data-ic="volume-2"></span><span class="vh-r"><span class="vh-bar"><i></i></span>53</span></div>
+          </div>
+          <div>
+            <h3>Volume &amp; brightness</h3>
+            <p>Play/pause, volume and brightness sit under every tab and follow the keys and Control Centre. Their colour warms as the level rises, and changes from the keys flash in the notch.</p>
+            <button class="try" type="button" data-key="vol-up">Flash the HUD <span>↑</span></button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY: real screenshots of the app -->
+  <section class="gallery" id="gallery">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">The real thing</p>
+        <h2>Straight off a MacBook.</h2>
+        <p class="lede">The copy above runs in your browser. These are screenshots of Shiny Notch itself, running on macOS.</p>
+      </div>
+      <div class="g-tabs" id="gTabs" role="tablist" aria-label="Screenshots"></div>
+      <div class="g-stage" id="gStage"></div>
+      <p class="g-cap" id="gCap" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- LOW POWER -->
+  <section class="power" id="power">
+    <div class="wrap power-grid">
+      <div class="reveal">
+        <p class="eyebrow">How it works</p>
+        <h2>Nothing polls while nothing changes.</h2>
+        <p class="lede">Music and Spotify announce every play, pause and track change. CoreAudio reports volume. DisplayServices reports brightness. The clock ticks once a second only while something on screen counts seconds, and a countdown is a single timer set for its end.</p>
+        <dl class="stats">
+          <div><dt><span class="count" data-to="0">0</span></dt><dd>polling loops while idle</dd></div>
+          <div><dt><span class="count" data-to="1">0</span>&nbsp;min</dt><dd>between ticks when nothing counts seconds</dd></div>
+          <div><dt><span class="count" data-to="3">0</span></dt><dd>desktops from one codebase</dd></div>
+        </dl>
+      </div>
+      <div class="timeline reveal" aria-label="Polling compared with events">
+        <div class="tl-row">
+          <span class="tl-label">A typical menu-bar app</span>
+          <div class="tl-track poll" id="tlPoll"></div>
+        </div>
+        <div class="tl-row">
+          <span class="tl-label">Shiny Notch</span>
+          <div class="tl-track events" id="tlEvents"></div>
+        </div>
+        <div class="tl-legend"><span><i class="lg-poll"></i>Wakes up to check</span><span><i class="lg-ev"></i>Wakes up because something changed</span></div>
+        <ul class="tl-facts">
+          <li><b>Native AppKit.</b> .NET MAUI on the AppKit head, not Mac Catalyst.</li>
+          <li><b>No icon assets.</b> SF Symbols are drawn once and cached.</li>
+          <li><b>No keyboard grabs.</b> The notch window can never take focus; typing happens in a quick entry popup.</li>
+          <li><b>No Dock icon.</b> It's an agent app. Open it again from Finder to get to Settings.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLATFORMS -->
+  <section class="platforms" id="platforms">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Download</p>
+        <h2>Built for the Mac.<br>Ships for everyone.</h2>
+        <p class="lede">The notch is shared code over a small set of platform interfaces. The Mac app is the main one; the Windows and Linux builds come from the same code with every release.</p>
+      </div>
+      <div class="plat-grid">
+        <a class="plat reveal mac" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">
+          <span class="plat-tag">Recommended</span>
+          <h3>macOS</h3>
+          <p class="plat-req">macOS 14 or later · Apple silicon</p>
+          <ul><li>Signed and notarized</li><li>Updates itself</li><li>Uses the hardware notch, or leaves room for one on other displays</li></ul>
+          <code>ShinyNotch-&lt;version&gt;.zip</code>
+          <span class="plat-go">Download <b>→</b></span>
+        </a>
+        <a class="plat reveal" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">
+          <span class="plat-tag soft">In testing</span>
+          <h3>Windows</h3>
+          <p class="plat-req">Windows 10 or 11 · x64 or Arm64</p>
+          <ul><li>Installs for the current user, no administrator</li><li>Not code-signed yet, so SmartScreen will warn</li></ul>
+          <code>…-windows-&lt;arch&gt;-setup.exe</code>
+          <span class="plat-go">Download <b>→</b></span>
+        </a>
+        <a class="plat reveal" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">
+          <span class="plat-tag soft">In testing</span>
+          <h3>Linux</h3>
+          <p class="plat-req">x64 or arm64 · GTK 4</p>
+          <ul><li>.deb and .rpm packages</li><li>Install a new release over the old one</li></ul>
+          <code>…-linux-&lt;arch&gt;.deb / .rpm</code>
+          <span class="plat-go">Download <b>→</b></span>
+        </a>
+      </div>
+      <p class="fineprint reveal">Every release includes <code>SHA256SUMS.txt</code>. The <a href="https://github.com/ShinySoftware/ShinyNotch/releases" target="_blank" rel="noopener">Releases page</a> is the only place official builds come from.</p>
+    </div>
+  </section>
+
+  <!-- SHINY -->
+  <section class="shiny" id="shiny">
+    <div class="wrap shiny-grid">
+      <div class="reveal">
+        <p class="eyebrow">Built on Shiny open source</p>
+        <h2>The notch is a control.<br>You can have it too.</h2>
+        <p class="lede">Shiny Notch is a showcase for Shiny .NET, the MIT-licensed libraries for .NET MAUI, Blazor and ASP.NET Core. The morphing notch, the music bars, open at login and the calendar all come from packages anyone can use.</p>
+        <a class="btn btn-ghost" href="https://www.shinylib.net" target="_blank" rel="noopener">Explore shinylib.net</a>
+      </div>
+      <div class="libs reveal">
+        <div class="code">
+          <div class="code-bar"><i></i><i></i><i></i><span>MauiProgram.cs</span></div>
+<pre><code><span class="k">var</span> notch = <span class="k">new</span> <span class="t">NotchView</span>
+{
+    MinNotchHeight = peekHeight,
+    CornerRadius = <span class="n">22</span>,
+    Content = panel
+};
+<span class="c">// morphs to fit the peek, the panel and the HUD</span>
+<span class="k">await</span> notchWindows.<span class="f">ShowAsync</span>(notch);</code></pre>
+        </div>
+        <ul class="lib-list">
+          <li><b>Shiny.Maui.Controls</b><span>NotchView: the surface that grows out of the camera and morphs to fit</span></li>
+          <li><b>Shiny.Maui.Controls.Desktop</b><span>The notch window, hover tracking, the cut-out size and file drop</span></li>
+          <li><b>Shiny.Core</b><span>Hosting, DI, permissions and open at login</span></li>
+          <li><b>Shiny.Calendar</b><span>Every calendar you have, for the tab and the meeting peek</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLOSER -->
+  <section class="closer">
+    <div class="wrap closer-inner reveal">
+      <img class="closer-icon" src="assets/icon.png" alt="Shiny Notch app icon" width="128" height="128">
+      <h2>Your notch is waiting.</h2>
+      <a class="btn btn-primary magnetic" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener">Download Shiny Notch</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <a href="https://shinysoft.biz" target="_blank" rel="noopener"><img src="assets/shinysoft-logo.png" alt="ShinySoft Technologies" width="220" height="75"></a>
+      <p>Designed, built and maintained by ShinySoft Technologies, Ontario, Canada. We build apps like this one for clients, and maintain the open-source libraries that make them possible.</p>
+      <p class="foot-mail">allan@shinysoft.biz</p>
+    </div>
+    <div>
+      <h4>App</h4>
+      <a href="https://github.com/ShinySoftware/ShinyNotch/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/ShinySoftware/ShinyNotch" target="_blank" rel="noopener">Source on GitHub</a>
+      <a href="https://github.com/ShinySoftware/ShinyNotch/issues" target="_blank" rel="noopener">Report an issue</a>
+    </div>
+    <div>
+      <h4>Shiny</h4>
+      <a href="https://www.shinylib.net" target="_blank" rel="noopener">shinylib.net</a>
+      <a href="https://github.com/shinyorg" target="_blank" rel="noopener">github.com/shinyorg</a>
+      <a href="https://shinysoft.biz/services/" target="_blank" rel="noopener">Work with us</a>
+    </div>
+  </div>
+  <div class="wrap foot-legal">
+    <p>© 2026 ShinySoft Technologies. Shiny Notch is source-available, not open source: read it and build it for yourself, but don't repackage or redistribute it. The Shiny .NET libraries are MIT. macOS, MacBook, Apple Music and Spotify are trademarks of their owners. The notch on this page is a browser copy; system stats, processes and some data in it are simulated.</p>
+  </div>
+</footer>
+
+<!-- Quick entry popup (the real app types into a popup too; the notch never takes the keyboard) -->
+<div class="entry" id="entry" hidden>
+  <form class="entry-box" id="entryForm" autocomplete="off">
+    <label class="entry-label" id="entryLabel" for="entryInput">New task</label>
+    <input class="entry-input" id="entryInput" type="text" placeholder="What needs doing?">
+    <textarea class="entry-area" id="entryArea" rows="6" hidden></textarea>
+    <div class="entry-extra" id="entryExtra"></div>
+    <p class="entry-hint" id="entryHint">Return adds it and clears the box for the next. Esc closes.</p>
+  </form>
+</div>
+
+<!-- Settings window -->
+<div class="settings" id="settings" hidden>
+  <div class="win" id="settingsWin" role="dialog" aria-labelledby="settingsTitle">
+    <div class="win-bar" id="settingsBar">
+      <span class="lights"><button type="button" class="l-red" id="settingsClose" aria-label="Close settings"></button><i class="l-yel"></i><i class="l-grn"></i></span>
+      <span class="win-title" id="settingsTitle">Shiny Notch Settings</span>
+    </div>
+    <div class="win-body" id="settingsBody"></div>
+  </div>
+</div>
+
+<!-- Capture selection overlay -->
+<div class="snap" id="snap" hidden><div class="snap-rect" id="snapRect"></div><p class="snap-tip" id="snapTip">Drag to select an area · Esc to cancel</p></div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

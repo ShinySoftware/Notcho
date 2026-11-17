@@ -8,6 +8,8 @@ A macOS app that turns the MacBook camera notch into a live panel. It's built wi
 
 Hover the notch to open it, and move away to let it fold back into the camera. Apple silicon only.
 
+**[Try it in your browser at shinysoftware.github.io/ShinyNotch](https://shinysoftware.github.io/ShinyNotch/)**: the product website has a working copy of the notch at the top of the page.
+
 The notch itself is shared code (`ShinyNotch.Core`) over a small set of platform interfaces. The macOS app is the main one; Windows and Linux heads build from the same code, ship with each release, and are still being tested.
 
 <p align="center">
@@ -79,6 +81,8 @@ CPU, GPU and memory as rings, a chart of the last 24 seconds of CPU, and network
 ### Processes
 The ten busiest of your own processes, sorted by name, CPU, memory, disk or network (click a heading to sort by it, and again to reverse it), updated once a second while the tab is open. The cross at the end of a row force quits it: the first click asks, the second kills it.
 
+<img src="docs/screenshots/processes.png" width="668" alt="Processes tab" />
+
 ### Capture
 One-click shortcuts into [macshot](https://macshot.io), the open-source screenshot app: area, screen, scrolling, text (OCR), recording, and its latest captures to open in its editor. The notch folds away before each capture so it isn't in the shot. The tab only appears when macshot is installed.
 
@@ -117,6 +121,8 @@ A ring that drains as the countdown runs, presets from 1 to 45 minutes, plus +1 
 ### Calculator
 A pocket calculator, clicked rather than typed: × and ÷ go before + and −, and it works in decimals, so 0.1 + 0.2 is 0.3. Recent sums are kept beside the keypad; click one to bring its answer back. The copy button puts the number on the clipboard without thousands separators, so it pastes anywhere. Settings can turn off digit grouping or the history, or copy every answer as you press =.
 
+<img src="docs/screenshots/calculator.png" width="668" alt="Calculator tab" />
+
 ### Teleprompter
 Your script scrolls right under the camera, so you read while looking at the lens. There's play/pause, nudge, speed and text size, and the notch stays open while it runs. Edit the script in Settings, and make the teleprompter wider or taller there too.
 
@@ -135,6 +141,16 @@ Changes from the keys or Control Centre flash in the notch.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
 - **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
 - It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Shiny Notch again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
+
+## Website
+
+The product website lives in [`website/`](website/): plain HTML, CSS and JavaScript with no build step, including a browser copy of the notch (`website/app.js`). [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to [GitHub Pages](https://shinysoftware.github.io/ShinyNotch/) whenever `website/` changes on `main`. To preview it locally, open `website/index.html`, or serve the folder:
+
+```bash
+python3 -m http.server -d website 8000
+```
+
+The screenshots in its gallery are copies of the ones in `docs/screenshots`, in `website/assets/screens`.
 
 ## Build and run
 
