@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- The website's social preview (og:image), 1200x630. Render it to website/assets/social-card.png with:
+     msedge --headless --hide-scrollbars --window-size=1200,630 --screenshot=website/assets/social-card.png docs/brand/social-card.html -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Geist:wght@400..600&family=Geist+Mono:wght@500&display=swap">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body { position: relative; background: #06050d; color: #f3f1fb; font-family: "Geist", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  .blob { position: absolute; border-radius: 50%; mix-blend-mode: screen; opacity: .6; }
+  .b1 { width: 620px; height: 620px; left: -80px; top: 120px; background: radial-gradient(circle, #6d28d9, transparent 65%); }
+  .b2 { width: 560px; height: 560px; right: -60px; top: -40px; background: radial-gradient(circle, #0e7490, transparent 65%); }
+  .b3 { width: 460px; height: 460px; left: 420px; top: 300px; background: radial-gradient(circle, #a21caf, transparent 65%); opacity: .45; }
+  .b4 { width: 400px; height: 400px; left: 820px; top: 330px; background: radial-gradient(circle, #15803d, transparent 65%); opacity: .3; }
+
+  /* the menu bar with the notch dropped open as the Now Playing panel */
+  .menubar { position: absolute; inset: 0 0 auto; height: 30px; background: rgba(14, 12, 30, .55); border-bottom: 1px solid rgba(255, 255, 255, .06); }
+  .notch { position: absolute; left: 50%; top: 0; width: 700px; transform: translateX(-50%); background: #000; border-radius: 0 0 30px 30px; padding: 0; overflow: hidden; box-shadow: 0 30px 80px -10px rgba(0, 0, 0, .8), 0 0 60px rgba(129, 140, 248, .18); }
+  .notch img { display: block; width: 100%; }
+
+  .copy { position: absolute; left: 0; right: 0; top: 290px; text-align: center; }
+  h1 { margin: 0; font: 800 96px/.95 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.03em; }
+  h1 em { font-style: normal; background: linear-gradient(100deg, #22d3ee, #818cf8 45%, #e879f9); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .04em; }
+  .sub { margin: 26px auto 0; max-width: 860px; font-size: 23px; line-height: 1.4; color: #a7a3c2; }
+  .brand { margin-top: 30px; display: inline-flex; align-items: center; gap: 12px; font: 600 24px/1 "Geist", sans-serif; }
+  .brand img { width: 40px; height: 40px; }
+  .brand span { font: 500 15px/1 "Geist Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: #a7a3c2; margin-left: 10px; }
+</style>
+</head>
+<body>
+  <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span>
+
+  <div class="menubar"></div>
+  <div class="notch"><img src="../../website/assets/screens/media.png" alt=""></div>
+
+  <div class="copy">
+    <h1>Put your notch <em>to work.</em></h1>
+    <p class="sub">Music, weather, timers, files, notes and your calendar, live in your MacBook's camera notch. One hover away.</p>
+    <div class="brand"><img src="../../website/assets/icon.png" alt="">Shiny Notch <span>Free · macOS 14+</span></div>
+  </div>
+</body>
+</html>
