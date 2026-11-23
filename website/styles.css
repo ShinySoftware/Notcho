@@ -476,10 +476,6 @@ img { max-width: 100%; }
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
 .spot { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(500px circle at var(--mx, 50%) var(--my, 30%), rgba(255, 186, 60, .14), transparent 60%); }
 
-.hint { position: absolute; top: calc(var(--mb-h) + 110px); left: calc(50% + 215px); display: flex; align-items: flex-end; gap: 4px; color: var(--muted); font: 500 italic 15px/1 var(--display); transform: rotate(-4deg); animation: hint-bob 2.2s ease-in-out infinite; transition: opacity .5s; pointer-events: none; }
-.hint svg { transform: scaleX(-1) rotate(20deg); }
-.hint.gone { opacity: 0; }
-@keyframes hint-bob { 50% { translate: 0 -6px; } }
 
 .hero-inner { max-width: 880px; margin: 0 auto; text-align: center; position: relative; }
 .eyebrow { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; font: 500 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
@@ -839,6 +835,39 @@ section h2 { letter-spacing: -.005em; }
 .closer .slogan { margin: -10px 0 0; font-size: clamp(20px, 3vw, 30px); }
 .mb-brand img { border-radius: 0; }
 
+
+/* ---------- vegas sign: a vintage marquee arrow pointing up at the notch demo ---------- */
+.vegas { position: absolute; top: calc(var(--mb-h) + 2px); left: calc(50% + 96px); z-index: 2; pointer-events: none; transition: opacity .6s, transform .6s var(--ease); transform-origin: 10% 0; animation: vegas-in 1.2s var(--spring) .6s both; filter: drop-shadow(0 14px 30px rgba(0, 0, 0, .55)); }
+.vegas.gone { opacity: 0; transform: translateY(-30px) scale(.9); }
+.vegas svg { display: block; overflow: visible; }
+.vegas .vs-mob { display: none; }
+@keyframes vegas-in { from { transform: translateY(-40px) rotate(6deg) scale(.85); opacity: 0; } }
+.vs-arrow { animation: vs-nudge 1.6s ease-in-out infinite; transform-box: fill-box; }
+@keyframes vs-nudge { 50% { transform: translate(-3px, -5px); } }
+.vs-bulbs circle { fill: #fff6c8; filter: drop-shadow(0 0 2px #ffe27a) drop-shadow(0 0 5px #ffb300); animation: vs-chase .9s steps(1, end) infinite; }
+.vs-bulbs .c1 { animation-delay: -.3s; }
+.vs-bulbs .c2 { animation-delay: -.6s; }
+@keyframes vs-chase { 0% { fill: #6b4a12; filter: none; } 33.34% { fill: #fff6c8; filter: drop-shadow(0 0 2px #ffe27a) drop-shadow(0 0 5px #ffb300); } }
+.vs-live { font: 400 34px/1 var(--script); fill: #ffd6f0; stroke: #ff3ea5; stroke-width: 1.2px; paint-order: stroke; filter: drop-shadow(0 0 3px #ff3ea5) drop-shadow(0 0 9px #ff3ea5); animation: vs-flicker 5s linear infinite; }
+.vs-notch { font: 400 25px/1 "Monoton", var(--display); letter-spacing: .02em; fill: #d9fffb; filter: drop-shadow(0 0 2px #2ec4b6) drop-shadow(0 0 8px #2ec4b6); animation: vs-flicker 7s linear 1.3s infinite; }
+.vs-small { font: 400 10px/1 var(--display); letter-spacing: .14em; fill: #ffd98a; }
+.vs-star { transform-box: fill-box; transform-origin: center; animation: vs-twinkle 2.4s ease-in-out infinite; filter: drop-shadow(0 0 6px #ffd23f); }
+@keyframes vs-twinkle { 50% { transform: rotate(22deg) scale(.82); opacity: .75; } }
+@keyframes vs-flicker { 0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: .35; } }
+/* the right-hand bunting starts past the sign */
+.bunting .str.r { left: calc(50% + 510px); }
+.hat-tip { right: auto; left: -92px; transform: rotate(-10deg); }
+.hat-tip::before { content: "↘"; left: auto; right: -20px; }
+@media (max-width: 960px) {
+  .vegas { left: 50%; translate: -50% 0; transform-origin: 50% 0; }
+  .vegas .vs-desk { display: none; }
+  .vegas .vs-mob { display: block; }
+  .bunting .str.l { right: calc(50% + 124px); }
+  .bunting .str.r { left: calc(50% + 124px); }
+  .hero { padding-top: calc(var(--mb-h) + 140px); }
+}
+/* ---------- end vegas sign ---------- */
+
 /* ---------- responsive ---------- */
 @media (max-width: 1180px) {
   .mb-nav { display: none; }
@@ -852,13 +881,11 @@ section h2 { letter-spacing: -.005em; }
 @media (max-width: 640px) {
   .hat { width: 128px; height: 128px; }
   .hat-tip { display: none; }
-  .bunting .str.l { right: calc(50% + 100px); }
-  .bunting .str.r { left: calc(50% + 100px); }
+  .bunting .str.l { right: calc(50% + 116px); }
+  .bunting .str.r { left: calc(50% + 116px); }
   .flag { width: 26px; height: 34px; margin-left: -13px; }
   .mb-status, .mb-brand b, .mb-clock { display: none; }
-  .hero { padding-top: calc(var(--mb-h) + 80px); min-height: 0; }
-  .hint { left: 50%; top: calc(var(--mb-h) + 8px); z-index: 2; translate: -50% 0; transform: none; flex-direction: column; align-items: center; animation: none; }
-  .hint svg { transform: none; width: 30px; height: 30px; }
+  .hero { padding-top: calc(var(--mb-h) + 136px); min-height: 0; }
   .hero-sub { font-size: 16px; }
   .bento { grid-template-columns: 1fr; }
   .bento > .card { grid-column: auto; }
