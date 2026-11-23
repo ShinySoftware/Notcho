@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/screenshots/icon.png" width="128" alt="Shiny Notch icon" />
+  <img src="docs/screenshots/icon.png" width="128" alt="Shiny Notch icon: a nacho hat" />
 </p>
 
 # Shiny Notch
+
+<p align="center"><b><i>Notcho Notcho Man! We got all the "fixins".</i></b></p>
 
 A macOS app that turns the MacBook camera notch into a live panel. It's built with .NET MAUI on the AppKit head ([maui-labs](https://github.com/dotnet/maui-labs)) and Shiny Controls' `NotchView` / `INotchWindowService`.
 
