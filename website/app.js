@@ -394,7 +394,7 @@
     ['Safari', '#0a84ff', 14, 1840, 120, 340], ['Xcode', '#64d2ff', 28, 3120, 880, 12], ['Music', '#ff375f', 3, 420, 40, 220],
     ['Slack', '#bf5af2', 6, 980, 30, 64], ['Figma', '#ff9f0a', 11, 1460, 22, 48], ['Terminal', '#8e8e93', 1, 96, 2, 0],
     ['Finder', '#64d2ff', 1, 210, 10, 0], ['Code', '#0a84ff', 9, 1210, 60, 8], ['Docker', '#0a84ff', 12, 2280, 420, 96],
-    ['Shiny Notch', '#818cf8', 1, 148, 1, 3], ['Mail', '#0a84ff', 2, 320, 14, 40], ['Notes', '#ffd60a', 1, 180, 4, 2]
+    ['Shiny Notch', '#ffc93c', 1, 148, 1, 3], ['Mail', '#0a84ff', 2, 320, 14, 40], ['Notes', '#ffd60a', 1, 180, 4, 2]
   ].map(([n, c, cpu, mem, disk, net], id) => ({ id, n, c, cpu, mem, disk, net, b: { cpu, mem, disk, net } }));
   const P = { sort: 'cpu', desc: true, ask: -1, askT: 0 };
   const mem = mb => mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : Math.round(mb) + ' MB';
@@ -1648,7 +1648,7 @@
       track.appendChild(m);
     };
     setInterval(() => { if (visible && !document.hidden) spawn(poll, 'p'); }, 350);
-    const EV = [['Track changed', '#ff375f'], ['Volume', '#818cf8'], ['Brightness', '#ff9f0a'], ['Paused', '#ff375f'], ['Timer done', '#ff9f0a'], ['Meeting soon', '#ff453a'], ['File dropped', '#64d2ff']];
+    const EV = [['Track changed', '#ff375f'], ['Volume', '#2ec4b6'], ['Brightness', '#ff9f0a'], ['Paused', '#ff375f'], ['Timer done', '#ff9f0a'], ['Meeting soon', '#ff453a'], ['File dropped', '#64d2ff']];
     const next = () => setTimeout(() => {
       if (visible && !document.hidden) { const [l, c] = EV[Math.floor(Math.random() * EV.length)]; spawn(ev, 'e', l, c); }
       next();
@@ -1688,6 +1688,87 @@
   // ======================================================================
   //  BOOT
   // ======================================================================
+  // ======================================================================
+  //  NACHO FIESTA: papel picado, drifting chips, and nacho rain from the hat
+  // ======================================================================
+  const FIESTA = ['#ff5a4e', '#ffc93c', '#8ac926', '#2ec4b6', '#ff7eb6', '#ff9f1c'];
+  const CHIP_SVG = '<svg viewBox="0 0 40 40"><path d="M5 34 L20 4 L36 31 Z" fill="#f4b23e" stroke="#9c5a0c" stroke-width="2.6" stroke-linejoin="round"/>'
+    + '<path d="M11 27 q4.5 6 9 0 q4 5.5 8.5 .5" fill="none" stroke="#ffd23f" stroke-width="4.5" stroke-linecap="round"/>'
+    + '<circle cx="19" cy="17" r="1.6" fill="#b9701a" opacity=".6"/><circle cx="25" cy="22" r="1.2" fill="#b9701a" opacity=".6"/></svg>';
+  const PEPPER_SVG = '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="#2e7d32"/><circle cx="20" cy="20" r="12" fill="#8bc34a"/>'
+    + '<circle cx="20" cy="20" r="9" fill="#c5e1a5"/><g fill="#fff6c8"><circle cx="20" cy="14" r="1.8"/><circle cx="25" cy="18" r="1.8"/><circle cx="24" cy="24" r="1.8"/>'
+    + '<circle cx="16" cy="24" r="1.8"/><circle cx="15" cy="18" r="1.8"/></g></svg>';
+  const SALSA_SVG = '<svg viewBox="0 0 40 40"><rect x="9" y="9" width="22" height="22" rx="6" fill="#e53935"/><rect x="13" y="12" width="7" height="5" rx="2" fill="#ff8a80"/></svg>';
+
+  // Papel picado strung either side of the notch, hanging along a sagging cord
+  function bunting() {
+    const SAG = 40;
+    $('#bunting').innerHTML = ['l', 'r'].map(side =>
+      `<div class="str ${side}"><svg class="cord" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 4 Q50 ${4 + 2 * SAG} 100 4" vector-effect="non-scaling-stroke"/></svg></div>`).join('');
+    const place = () => $$('.bunting .str').forEach((str, si) => {
+      const n = Math.max(2, Math.floor(str.clientWidth / 46)), h = str.clientHeight;
+      const flags = Array.from({ length: n }, (_, i) => {
+        const t = (i + .5) / n;
+        const top = (4 + 2 * SAG * t * (1 - t)) / 100 * h - 2;
+        return `<span class="flag" style="left:${t * 100}%;top:${top}px;--c:${FIESTA[(i + si * 3) % FIESTA.length]};animation-delay:${(-(i * .37 + si)).toFixed(2)}s"></span>`;
+      }).join('');
+      str.querySelectorAll('.flag').forEach(f => f.replaceWith());
+      str.insertAdjacentHTML('beforeend', flags);
+    });
+    place();
+    let t;
+    addEventListener('resize', () => { clearTimeout(t); t = setTimeout(place, 150); });
+  }
+
+  function floaters() {
+    const spots = [[6, 30], [14, 72], [86, 26], [92, 64], [24, 50], [76, 82], [52, 90], [68, 40]];
+    $('#floaters').innerHTML = spots.map(([x, y], i) => {
+      const size = 34 + (i * 13) % 30;
+      const svg = i % 4 === 3 ? PEPPER_SVG : CHIP_SVG;
+      return `<span class="nacho" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;--d:${16 + i * 3}s;--dl:-${i * 2}s;--dx:${(i % 2 ? -1 : 1) * (20 + i * 6)}px;--dy:${-(30 + i * 5)}px;--r0:${i * 40}deg;--r1:${i * 40 + 140}deg">${svg}</span>`;
+    }).join('');
+  }
+
+  let raining = false;
+  function nachoRain() {
+    $('#hat img').animate([
+      { transform: 'rotate(0) scale(1)' }, { transform: 'rotate(-18deg) scale(1.15)' },
+      { transform: 'rotate(14deg) scale(1.1)' }, { transform: 'rotate(0) scale(1)' }
+    ], { duration: 700, easing: 'ease-out' });
+    const lines = ['Notcho Notcho Man!', 'We got all the fixins.', 'Extra cheese, coming up.', 'Hold the jalapeños? Never.'];
+    toast(lines[Math.floor(Math.random() * lines.length)], { icon: 'party-popper' });
+    if (reduced || raining) return;
+    raining = true;
+    setTimeout(() => { raining = false; }, 1200);
+
+    const rain = $('#rain');
+    const W = innerWidth, H = innerHeight;
+    const count = Math.round(Math.min(70, Math.max(30, W / 22)));
+    Array.from({ length: count }).forEach(() => {
+      const el = document.createElement('span');
+      const roll = Math.random();
+      const size = 26 + Math.random() * 38;
+      el.className = 'nacho';
+      el.innerHTML = roll < .72 ? CHIP_SVG : roll < .88 ? PEPPER_SVG : SALSA_SVG;
+      el.style.width = el.style.height = size + 'px';
+      el.style.left = (Math.random() * (W + 80) - 40) + 'px';
+      rain.appendChild(el);
+      const drift = (Math.random() - .5) * 240, spin = (Math.random() - .5) * 900;
+      el.animate([
+        { transform: 'translate(0, 0) rotate(0deg)' },
+        { transform: `translate(${drift}px, ${H + 160}px) rotate(${spin}deg)` }
+      ], { duration: 1800 + Math.random() * 1800, delay: Math.random() * 900, easing: 'cubic-bezier(.35,.05,.6,1)', fill: 'both' })
+        .finished.then(() => el.replaceWith());
+    });
+  }
+
+  function fiesta() {
+    bunting();
+    floaters();
+    $('#hat').addEventListener('click', nachoRain);
+    $('#rainBtn').addEventListener('click', nachoRain);
+  }
+
   function boot() {
     fillIcons();
     renderDesk();
@@ -1707,6 +1788,7 @@
     counters();
     timeline();
     gallery();
+    fiesta();
   }
   if (window.lucide) boot();
   else addEventListener('load', boot);
