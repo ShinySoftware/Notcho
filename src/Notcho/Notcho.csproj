@@ -12,7 +12,10 @@
 
         <!-- No space: the bundle is named from this, and a space in the .app name kept the platform's MauiMenuBar.bundle out of it (startup crash). The menu-bar name comes from CFBundleDisplayName. -->
         <ApplicationTitle>Notcho</ApplicationTitle>
-        <ApplicationId>net.shiny.notcho</ApplicationId>
+        <!-- Still the pre-rename bundle id: the Developer ID signing and notarization are set up for it, and
+             keeping it lets installed Shiny Notch copies update themselves in place (the updater refuses a
+             release whose bundle id differs) and keeps their granted permissions. -->
+        <ApplicationId>net.shiny.notch</ApplicationId>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
         <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
