@@ -79,6 +79,8 @@ public sealed class SettingsPage : ContentPage
         if (UpdateSection(updates) is { } update)
             sections.Add(update);
         sections.Add(this.NotchSection(settings));
+        sections.Add(this.FillSection(settings, closed: true));
+        sections.Add(this.FillSection(settings, closed: false));
         sections[0].HeaderView = Intro(sections[0].Title);
         sections.Add(StandInSection(settings));
         sections.Add(PeekSection(settings));
@@ -180,6 +182,137 @@ public sealed class SettingsPage : ContentPage
         section.Cells.Add(Switch("Show brightness changes", "sun.max.fill", Ui.Yellow, settings.ShowBrightnessHud, v => settings.ShowBrightnessHud = v));
         return section;
     }
+
+    /// <summary>
+    /// What the closed notch, or the open panel, is painted with: black (the default), one colour, or a
+    /// gradient from top to bottom. Picking another kind rebuilds the page for its rows; a colour changes in
+    /// place, and the notch repaints as it's picked.
+    /// </summary>
+    TableSection FillSection(AppSettings settings, bool closed)
+    {
+        NotchFill Current() => closed ? settings.ClosedNotchFill : settings.OpenNotchFill;
+        void Save(NotchFill fill)
+        {
+            if (closed)
+                settings.ClosedNotchFill = fill;
+            else
+                settings.OpenNotchFill = fill;
+        }
+
+        var section = Section(
+            closed ? "Closed Notch Colour" : "Open Notch Colour",
+            closed
+                ? "The closed notch, and the volume and brightness it shows when they change. On a MacBook the camera's own cut-out always stays black, so a colour shows either side of it - a gradient from black at the top blends into it."
+                : "The panel the notch opens into. A gradient runs from the top to the bottom. The notch's text is white, so deeper colours read best."
+        );
+        foreach (var (kind, text) in new[] { (NotchFillKind.Black, "Black"), (NotchFillKind.Color, "Colour"), (NotchFillKind.Gradient, "Gradient") })
+            section.Cells.Add(new RadioCell { Title = text, Value = kind.ToString() });
+
+        var fill = Current();
+        RadioCell.SetSelectedValue(section, fill.Kind.ToString());
+        section.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != RadioCell.SelectedValueProperty.PropertyName)
+                return;
+            if (RadioCell.GetSelectedValue(section) is not string picked || !Enum.TryParse<NotchFillKind>(picked, out var kind))
+                return;
+            var now = Current();
+            if (kind == now.Kind)
+                return;
+            Save(Switched(now, kind));
+            this.Rebuild();
+        };
+
+        if (fill.Kind != NotchFillKind.Black)
+            section.Cells.Add(ColorCell(fill.Kind == NotchFillKind.Gradient ? "Top" : "Colour", fill.From, c => Save(Current() with { From = c })));
+        if (fill.Kind == NotchFillKind.Gradient)
+            section.Cells.Add(ColorCell("Bottom", fill.To, c => Save(Current() with { To = c })));
+        return section;
+    }
+
+    static readonly Color FirstColor = NotchFill.Swatches.First(s => s.Name == "Turquoise").Color;
+
+    /// <summary>
+    /// A fill changed to another kind, keeping what colours it can. From black it starts on a colour, and a
+    /// new gradient starts from black at the top, so it blends into the camera's cut-out.
+    /// </summary>
+    static NotchFill Switched(NotchFill from, NotchFillKind kind) => (from.Kind, kind) switch
+    {
+        (_, NotchFillKind.Black) => NotchFill.Black,
+        (NotchFillKind.Black, NotchFillKind.Color) => new NotchFill(kind, FirstColor, FirstColor),
+        (NotchFillKind.Black, NotchFillKind.Gradient) => new NotchFill(kind, Colors.Black, FirstColor),
+        // A gradient that starts from black keeps its other colour.
+        (NotchFillKind.Gradient, NotchFillKind.Color) => new NotchFill(kind, from.From == Colors.Black ? from.To : from.From, from.To),
+        _ => new NotchFill(kind, Colors.Black, from.From)
+    };
+
+    /// <summary>
+    /// The swatches, and the colour as hex for any other: typing a valid one picks it. The ring marks the
+    /// swatch matching the colour, when one does.
+    /// </summary>
+    static CustomCell ColorCell(string title, Color value, Action<Color> changed)
+    {
+        const double Size = 20;
+        var swatches = new List<(Color Color, Border View)>();
+        var hex = new Entry
+        {
+            Text = value.ToArgbHex(),
+            WidthRequest = 84,
+            FontSize = 12,
+            TextColor = Ui.Text,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        void Mark(Color picked) => swatches.ForEach(s => s.View.Stroke = Same(s.Color, picked) ? Ui.Text : Ui.Separator);
+        void Pick(Color picked)
+        {
+            Mark(picked);
+            changed(picked);
+        }
+
+        var grid = new Grid { ColumnSpacing = 6, RowSpacing = 6, VerticalOptions = LayoutOptions.Center };
+        foreach (var (swatch, i) in NotchFill.Swatches.Select((s, i) => (s, i)))
+        {
+            var view = new Border
+            {
+                WidthRequest = Size,
+                HeightRequest = Size,
+                BackgroundColor = swatch.Color,
+                StrokeThickness = 2,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.Ellipse(),
+                AutomationId = swatch.Name
+            }.Pressable(() =>
+            {
+                hex.Text = swatch.Color.ToArgbHex();
+                Pick(swatch.Color);
+            });
+            swatches.Add((swatch.Color, view));
+            grid.Children.Add(view.At(row: i / 6, column: i % 6));
+        }
+        grid.ColumnDefinitions = [.. Enumerable.Range(0, 6).Select(_ => new ColumnDefinition(Size))];
+        grid.RowDefinitions = [new RowDefinition(Size), new RowDefinition(Size)];
+        Mark(value);
+
+        hex.Completed += (_, _) =>
+        {
+            if (NotchFill.TryColor(hex.Text, out var typed))
+                Pick(typed);
+        };
+
+        var cell = new CustomCell
+        {
+            Title = title,
+            IconSource = Ui.SymbolSource("paintpalette.fill", 16, Ui.Orange),
+            Description = "Or type a hex colour and press Return",
+            IsSelectable = false,
+            CustomContent = new HorizontalStackLayout { Spacing = 12, HorizontalOptions = LayoutOptions.End, Children = { grid, hex } }
+        };
+        // As for switches (see NewSwitchCell): the row's own tap recognizer would take the swatches' clicks.
+        cell.GestureRecognizers.Clear();
+        return cell;
+    }
+
+    static bool Same(Color a, Color b) => a.ToArgbHex() == b.ToArgbHex();
 
     /// <summary>
     /// The stand-in for a camera notch on a display without one. Its sliders show the change on the notch as

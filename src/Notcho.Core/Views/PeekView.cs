@@ -159,7 +159,11 @@ sealed class PeekView : Grid, ILiveView, IWinged
     public Wings Wings { get; }
 
     /// <summary>Hung above the open panel (see <see cref="PanelView"/>): the black runs on into it, so it has no bottom corners.</summary>
-    public void JoinPanel() => this.black.StrokeShape = new RoundRectangle { CornerRadius = 0 };
+    public void JoinPanel()
+    {
+        this.black.StrokeShape = new RoundRectangle { CornerRadius = 0 };
+        this.black.Background = Ui.OpenFill.TopBrush();
+    }
 
     /// <summary>
     /// Lays out a grid of wings either side of the camera: both columns as wide as the wider wing, so the
@@ -187,7 +191,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
         var rightInset = wing - rightWidth;
         black = new Border
         {
-            BackgroundColor = Colors.Black,
+            Background = Ui.ClosedFill.ToBrush(),
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 0, CornerRadius, CornerRadius) },
             Margin = new Thickness(leftInset, 0, rightInset, 0),

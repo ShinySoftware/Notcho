@@ -98,7 +98,7 @@ sealed class PanelView : Grid, ILiveView, IDisposable
         // The neck runs straight on into the top edge, so the top corners are the closed notch's.
         this.surface = new Border
         {
-            BackgroundColor = Colors.Black,
+            Background = Ui.OpenFill.ToBrush(),
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(PeekView.CornerRadius, PeekView.CornerRadius, CornerRadius, CornerRadius) },
             HorizontalOptions = LayoutOptions.Center,
@@ -226,7 +226,7 @@ sealed class PanelView : Grid, ILiveView, IDisposable
     static Path Flare(string data, LayoutOptions side) => new()
     {
         Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString(data)!,
-        Fill = Colors.Black,
+        Fill = Ui.OpenFill.TopBrush(),
         StrokeThickness = 0,
         WidthRequest = FlareRadius,
         HeightRequest = FlareRadius,

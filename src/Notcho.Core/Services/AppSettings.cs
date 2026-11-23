@@ -68,6 +68,20 @@ public sealed class AppSettings
         set => this.Set(nameof(this.TeleprompterFollowVoice), value);
     }
 
+    /// <summary>What the closed notch (and the volume/brightness HUD) is painted with. Black unless changed.</summary>
+    public NotchFill ClosedNotchFill
+    {
+        get => NotchFill.Parse(this.Text(nameof(this.ClosedNotchFill)));
+        set => this.Set(nameof(this.ClosedNotchFill), value.Serialize());
+    }
+
+    /// <summary>What the open panel is painted with. Black unless changed.</summary>
+    public NotchFill OpenNotchFill
+    {
+        get => NotchFill.Parse(this.Text(nameof(this.OpenNotchFill)));
+        set => this.Set(nameof(this.OpenNotchFill), value.Serialize());
+    }
+
     public bool UseHardwareNotch
     {
         get => this.Bool(nameof(this.UseHardwareNotch), true);

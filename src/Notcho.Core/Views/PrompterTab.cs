@@ -56,14 +56,15 @@ sealed class PrompterTab : VerticalStackLayout
         this.script.SizeChanged += (_, _) => this.Scroll();
         this.ShowWord(follow: false);
 
-        // Black fading to clear over the top and bottom, so lines slide in and out rather than being cut.
+        // The panel's colour fading to clear over the top and bottom, so lines slide in and out rather than
+        // being cut. The script sits in the middle of the panel, so a gradient panel fades from about there.
         static BoxView Fade(bool top) => new()
         {
             HeightRequest = FadeHeight,
             InputTransparent = true,
             VerticalOptions = top ? LayoutOptions.Start : LayoutOptions.End,
             Background = new LinearGradientBrush(
-                [new GradientStop(Colors.Black, 0), new GradientStop(Colors.Black.WithAlpha(0), 1)],
+                [new GradientStop(Ui.OpenFill.At(top ? 0.35 : 0.65), 0), new GradientStop(Ui.OpenFill.At(top ? 0.35 : 0.65).WithAlpha(0), 1)],
                 new Point(0, top ? 0 : 1),
                 new Point(0, top ? 1 : 0))
         };

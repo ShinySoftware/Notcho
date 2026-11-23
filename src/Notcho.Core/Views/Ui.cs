@@ -15,6 +15,12 @@ static class Ui
     /// <summary>The head's icons, text measuring and hover. Set once at startup, before any view is built.</summary>
     public static IPlatformUi Platform { get; set; } = null!;
 
+    /// <summary>What the closed notch and the HUD are painted with. Kept current from Settings by NotchController.</summary>
+    public static Services.NotchFill ClosedFill { get; set; } = Services.NotchFill.Black;
+
+    /// <summary>What the open panel is painted with. Kept current from Settings by NotchController.</summary>
+    public static Services.NotchFill OpenFill { get; set; } = Services.NotchFill.Black;
+
     // Apple's dark-mode system colours, so the notch sits with the rest of macOS.
     public static readonly Color Text = Colors.White;
     public static readonly Color Secondary = Color.FromRgba(235, 235, 245, 153);

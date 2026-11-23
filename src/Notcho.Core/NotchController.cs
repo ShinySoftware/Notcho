@@ -140,6 +140,8 @@ public sealed class NotchController
         this.notch = notch;
         this.fileDrop = fileDrop;
         this.settings = settings;
+        Ui.ClosedFill = settings.ClosedNotchFill;
+        Ui.OpenFill = settings.OpenNotchFill;
         this.media = media;
         this.controls = controls;
         this.stats = stats;
@@ -310,6 +312,15 @@ public sealed class NotchController
                 this.Rebuild(NotchTab.Calculator);
             else if (key is nameof(AppSettings.AwakeKeepDisplayOn))
                 this.Rebuild(NotchTab.Awake);
+            // A new colour repaints whatever is showing. An open panel is built again whole: its pieces
+            // (the neck, the curves either side, the card) each take the colour when they're made.
+            else if (key is nameof(AppSettings.ClosedNotchFill) or nameof(AppSettings.OpenNotchFill))
+            {
+                Ui.ClosedFill = this.settings.ClosedNotchFill;
+                Ui.OpenFill = this.settings.OpenNotchFill;
+                this.reseat = this.mode == Mode.Panel;
+                _ = this.RenderAsync();
+            }
             // The tab strip changes. Turned off while showing it, the panel moves to Now Playing.
             else if (key is nameof(AppSettings.HiddenTabs) && this.mode == Mode.Panel)
             {
@@ -619,8 +630,8 @@ public sealed class NotchController
 
     string Key() => this.mode switch
     {
-        Mode.Peek => $"peek|{this.previewingSize}|{this.PeekKey}",
-        Mode.Hud => $"hud|{this.SizeKey}",
+        Mode.Peek => $"peek|{this.previewingSize}|{this.PeekKey}|{Ui.ClosedFill.Serialize()}",
+        Mode.Hud => $"hud|{this.SizeKey}|{Ui.ClosedFill.Serialize()}",
         // Panels are rebuilt on every structural change, and those are rare.
         _ => $"panel|{this.tab}|{Guid.NewGuid()}"
     };
@@ -795,7 +806,7 @@ public sealed class NotchController
             return peek;
         }
 
-        return new BoxView { Color = Colors.Black, WidthRequest = Math.Max(this.Cutout.Width, 8), HeightRequest = this.PeekHeight };
+        return new BoxView { Color = Ui.OpenFill.Top, WidthRequest = Math.Max(this.Cutout.Width, 8), HeightRequest = this.PeekHeight };
     }
 
     TrayTab BuildTray()
