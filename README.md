@@ -56,6 +56,7 @@ While collapsed, the notch shows a "wing" either side of the camera. From the le
 - what's playing: the artwork, and bars in the artwork's colour (flat when paused);
 - any music buttons you've turned on (previous, play/pause, next);
 - any system readings you've turned on (CPU, GPU, memory, network, disk);
+- a cup while Keep Awake is on;
 - last, at the right edge: a running timer, a meeting starting in the next 15 minutes, or the weather where you are, in that order.
 
 They're split across the camera so the two wings come out as even as they can, so one side never gets crowded while the other sits empty. With nothing to show, the notch disappears into the camera housing.
@@ -122,6 +123,9 @@ A ring that drains as the countdown runs, presets from 1 to 45 minutes, plus +1 
 
 <img src="docs/screenshots/timer.png" width="668" alt="Timer tab" />
 
+### Keep Awake
+Stops the computer going to sleep, or the screen going dark, while you're away from the keyboard, the way Amphetamine and Caffeine do. Keep it awake until you stop it, or for 15 minutes to 4 hours, with +15 min to stretch a session that's running. Click the ring to switch it on or off. The screen stays on too unless you turn that off, and changing it applies straight away. A cup shows on the closed notch while it's on. Settings can start it whenever Shiny Notch opens. Closing the lid or choosing Sleep still sleeps the computer: only sleep from sitting idle is held off.
+
 ### Calculator
 A pocket calculator, clicked rather than typed: × and ÷ go before + and −, and it works in decimals, so 0.1 + 0.2 is 0.3. Recent sums are kept beside the keypad; click one to bring its answer back. The copy button puts the number on the clipboard without thousands separators, so it pastes anywhere. Settings can turn off digit grouping or the history, or copy every answer as you press =.
 
@@ -143,7 +147,7 @@ Changes from the keys or Control Centre flash in the notch.
 ### And
 - **Pin** (⦿) keeps the panel open.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
-- **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
+- **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
 - It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Shiny Notch again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
 
 ## Website
@@ -170,7 +174,7 @@ dotnet build -c Release
 open src/ShinyNotch/bin/Release/net10.0-macos/osx-arm64/ShinyNotch.app
 ```
 
-Debug builds accept `--open <Media|Weather|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
+Debug builds accept `--open <Media|Weather|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Awake|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
 
 ```bash
 src/ShinyNotch/bin/Debug/net10.0-macos/osx-arm64/ShinyNotch.app/Contents/MacOS/ShinyNotch --open Weather
@@ -205,6 +209,7 @@ rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src
 | AppKit (`NSAppleScript`, `NSWorkspace`, `NSPasteboard`, `NSSharingService`) | Now Playing in Music and Spotify; the file tray's copy, reveal, open and AirDrop |
 | AVFoundation | The mirror's camera and voice notes' microphone |
 | IOKit USB (UVC) | A USB webcam's own brightness |
+| IOKit power management (`IOPMAssertionCreateWithName`) | Keep Awake: the same "prevent idle sleep" assertions `caffeinate` takes, listed in `pmset -g assertions` |
 | CoreAudio / AudioToolbox | Output volume and mute |
 | DisplayServices (private) | Built-in display brightness; there is no public API on Apple silicon |
 | IOKit, mach `host_statistics`, `sysctl`, `getifaddrs` | GPU utilisation, disk bytes, CPU and memory, network bytes |
@@ -229,6 +234,7 @@ rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src
 - **The look** is Apple's dark system palette, SF Symbols (drawn once into cached images, so no icon assets ship), and Maui.Graphics drawing for the rings, bars and charts, which repaint in place without rebuilding anything.
 
 - `NotchController` runs the notch in one of three modes (peek, panel, HUD). It rebuilds the content when its structure changes and updates text in place otherwise. The AppKit head never creates native views for children added to an on-screen layout, so a content swap is a fresh page, and so is a change to the Settings page's lists.
+- **Keep Awake** takes a power assertion on macOS, `SetThreadExecutionState` on Windows, and a logind sleep inhibitor plus the desktop's idle inhibitor (freedesktop ScreenSaver, or GNOME's session manager) on Linux. Each is released by the system when the app quits, however it quits, so a crash never leaves the computer unable to sleep. A timed session is one timer set for its end, like the countdown.
 - **Now Playing** uses AppleScript, not MediaRemote. Since macOS 15.4 the system-wide now-playing API returns nothing to apps without an Apple entitlement, so only Music and Spotify are seen.
 - **Weather** comes from Open-Meteo, which converts units server-side, so switching °C/°F refetches. Forecasts are cached for 20 minutes per place.
 - **Text entry** lives in Settings, an ordinary window, and in the quick entry popup for tasks. The notch window is borderless and can never take keyboard focus.

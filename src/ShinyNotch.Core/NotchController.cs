@@ -61,6 +61,7 @@ public sealed class NotchController
     readonly ProcessListService processes;
     readonly CalendarService calendar;
     readonly CountdownService countdown;
+    readonly KeepAwakeService awake;
     readonly FileTrayService tray;
     readonly TeleprompterService prompter;
     readonly WeatherService weather;
@@ -119,6 +120,7 @@ public sealed class NotchController
         ProcessListService processes,
         CalendarService calendar,
         CountdownService countdown,
+        KeepAwakeService awake,
         FileTrayService tray,
         TeleprompterService prompter,
         WeatherService weather,
@@ -144,6 +146,7 @@ public sealed class NotchController
         this.processes = processes;
         this.calendar = calendar;
         this.countdown = countdown;
+        this.awake = awake;
         this.tray = tray;
         this.prompter = prompter;
         this.weather = weather;
@@ -254,6 +257,13 @@ public sealed class NotchController
             this.Open(NotchTab.Timer);
             this.ScheduleClose(FinishedHold);
         };
+        this.awake.StateChanged += (_, _) =>
+        {
+            this.Rebuild(NotchTab.Awake);
+            // The cup comes and goes in the neck too, which a rebuild of the tab it's on leaves alone.
+            this.RefreshNeck();
+            this.ScheduleTick();
+        };
         this.calendar.Changed += (_, _) => this.Rebuild(NotchTab.Calendar);
         this.tray.Changed += (_, _) => this.Rebuild(NotchTab.Tray);
         this.prompter.StateChanged += (_, _) =>
@@ -298,6 +308,8 @@ public sealed class NotchController
                 this.Rebuild(NotchTab.Prompter);
             else if (key is nameof(AppSettings.CalculatorGroupDigits) or nameof(AppSettings.CalculatorShowTape))
                 this.Rebuild(NotchTab.Calculator);
+            else if (key is nameof(AppSettings.AwakeKeepDisplayOn))
+                this.Rebuild(NotchTab.Awake);
             // The tab strip changes. Turned off while showing it, the panel moves to Now Playing.
             else if (key is nameof(AppSettings.HiddenTabs) && this.mode == Mode.Panel)
             {
@@ -309,13 +321,14 @@ public sealed class NotchController
             else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight) or nameof(AppSettings.StandInCameraWidth) or nameof(AppSettings.StandInCameraHeight) or nameof(AppSettings.StandInMinWidth))
                 this.PreviewSize();
             // The panel picks the change up on closing.
-            else if (key is nameof(AppSettings.PeekItems) or nameof(AppSettings.PeekMusicButtons) or nameof(AppSettings.ClickToOpen) && this.mode == Mode.Peek)
+            else if (key is nameof(AppSettings.PeekItems) or nameof(AppSettings.PeekMusicButtons) or nameof(AppSettings.ClickToOpen) or nameof(AppSettings.AwakeShowInPeek) && this.mode == Mode.Peek)
                 _ = this.RenderAsync();
         };
 
         this.media.Start();
         this.controls.Start();
         this.clipboard.Start();
+        this.awake.StartIfAskedAtLaunch();
         _ = this.calendar.RefreshAsync();
         _ = this.weather.RefreshAsync();
         var now = this.time.GetUtcNow();
@@ -446,6 +459,9 @@ public sealed class NotchController
     IReadOnlySet<PeekMusicButton> PeekButtons => this.settings.ClickToOpen
         ? PeekMusicButtonInfo.Shown(this.settings.PeekMusicButtons)
         : new HashSet<PeekMusicButton>();
+
+    /// <summary>The closed notch shows a cup: keeping awake, and Settings hasn't turned it off.</summary>
+    bool PeekAwake => this.awake.IsActive && this.settings.AwakeShowInPeek;
 
     void ScheduleClose(TimeSpan? delay = null)
     {
@@ -610,7 +626,7 @@ public sealed class NotchController
     };
 
     /// <summary>Everything the closed notch is built from.</summary>
-    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{String.Join(',', this.PeekButtons.Order())}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
+    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{String.Join(',', this.PeekButtons.Order())}|{this.PeekAwake}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
 
     /// <summary>
     /// Renders the current state. One render at a time: asking during one queues another, which renders
@@ -702,7 +718,7 @@ public sealed class NotchController
         // An empty peek vanishes into a real camera notch; the stand-in has to stay drawn.
         var keepEmpty = this.previewingSize || !this.HasHardwareCutout;
         var items = PeekItemInfo.Shown(this.settings.PeekItems);
-        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.PeekButtons, this.OnMusicButtonPressed, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
+        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.PeekButtons, this.OnMusicButtonPressed, this.PeekAwake, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
     }
 
     /// <summary>
@@ -755,6 +771,7 @@ public sealed class NotchController
             NotchTab.Processes => new ProcessesTab(this.processes),
             NotchTab.Calendar => new CalendarTab(this.calendar, this.time, this.shell, () => _ = this.RenderAsync(), this.eventEntry.Show),
             NotchTab.Timer => new TimerTab(this.countdown),
+            NotchTab.Awake => new KeepAwakeTab(this.awake, this.settings),
             NotchTab.Capture when this.capture != null => this.capture.Build(this.FoldAway),
             NotchTab.Mirror => new MirrorTab(this.settings, this.tray, this.cameraControls),
             NotchTab.Notes => new NotesTab(this.notes, this.tray),
@@ -828,7 +845,8 @@ public sealed class NotchController
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// Something on screen counts seconds: a running countdown (the peek and the Timer tab show it), the
+    /// Something on screen counts seconds: a running countdown (the peek and the Timer tab show it), a timed
+    /// keep-awake session on its tab, the
     /// player's position, the Stats and Processes tabs' sampling or readings in the peek, or the Capture tab watching for a
     /// recording. Everything else changes by the minute at most.
     /// </summary>
@@ -844,6 +862,7 @@ public sealed class NotchController
             // Watching for the capture tool's state (a recording starting or ending).
             NotchTab.Capture => true,
             NotchTab.Notes => this.notes.IsRecording,
+            NotchTab.Awake => this.awake.IsActive && !this.awake.IsIndefinite,
             _ => false
         });
 

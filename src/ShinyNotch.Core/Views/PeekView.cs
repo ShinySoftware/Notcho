@@ -85,8 +85,8 @@ interface IWinged
 /// <summary>
 /// The collapsed notch: a "wing" either side of the camera, at the camera's height. In order from the left
 /// edge round to the right: what's playing (the artwork and its bars, in the artwork's colour), any music
-/// buttons asked for, any system readings turned on in Settings, and last the countdown, a meeting that's
-/// about to start, or the weather. They're split across the camera so the two wings come out as even as
+/// buttons asked for, any system readings turned on in Settings, a cup while keeping awake, and last the
+/// countdown, a meeting that's about to start, or the weather. They're split across the camera so the two wings come out as even as
 /// they can (see <see cref="Balance"/>).
 /// </summary>
 /// <remarks>
@@ -120,6 +120,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     const double ReadingSymbolSize = 10;
     const double ReadingSpacing = 3;
     const double MusicButtonSize = 11;
+    const double AwakeSymbolSize = 12;
     static readonly Thickness MusicButtonPadding = new(5, 4);
     /// <summary>Kept clear between a wing's content and the camera.</summary>
     const double CameraGap = 6;
@@ -207,7 +208,8 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// <param name="minWidth">The narrowest the notch may be (see <see cref="Lay"/>); 0 around a real camera.</param>
     /// <param name="buttons">The music buttons to show while there's a track; empty unless the notch opens on a click.</param>
     /// <param name="pressed">A music button was clicked, before it acts - so the notch can tell it from a click on itself.</param>
-    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
+    /// <param name="awake">Keeping awake, and Settings wants the cup that says so.</param>
+    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, bool awake, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
     {
         // Every part with its width, in order from the left wing's outer edge round to the right wing's.
         var parts = new List<(View View, double Width)>();
@@ -248,6 +250,13 @@ sealed class PeekView : Grid, ILiveView, IWinged
                 Add(Reading(info, stats.Current, out var value, out var width), width);
                 readings.Add((info.Item, value));
             }
+        }
+
+        if (awake)
+        {
+            var cup = Ui.Symbol("cup.and.saucer.fill", AwakeSymbolSize, Ui.Yellow);
+            cup.VerticalOptions = LayoutOptions.Center;
+            Add(cup, Ui.SymbolBox(AwakeSymbolSize));
         }
 
         // The countdown, a meeting or the weather always ends the right wing, at its outer edge.

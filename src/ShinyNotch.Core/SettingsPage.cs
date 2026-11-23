@@ -85,6 +85,7 @@ public sealed class SettingsPage : ContentPage
         sections.Add(TabsSection(settings, notch.AvailableTabs));
         sections.Add(this.TeleprompterSection(settings, prompter));
         sections.Add(CalculatorSection(settings, calculator));
+        sections.Add(KeepAwakeSection(settings));
         // Nothing to ask for where the platform can't locate: the places are the whole story.
         if (!weather.IsLocationUnavailable)
             sections.Add(this.WeatherSection(settings, weather));
@@ -304,6 +305,15 @@ public sealed class SettingsPage : ContentPage
         section.Cells.Add(Switch("Show the history beside the keypad", "clock.arrow.circlepath", Ui.Teal, settings.CalculatorShowTape, v => settings.CalculatorShowTape = v));
         section.Cells.Add(Switch("Copy each answer when I press =", "doc.on.doc", Ui.Blue, settings.CalculatorCopyOnEquals, v => settings.CalculatorCopyOnEquals = v));
         section.Cells.Add(Button("Clear the history", calculator.ClearTape));
+        return section;
+    }
+
+    static TableSection KeepAwakeSection(AppSettings settings)
+    {
+        var section = Section("Keep Awake", "Stops the computer going to sleep, or the screen going dark, while you're away from the keyboard. Start it from the Keep Awake tab, or click the ring there, for a while or until you stop it. Closing the lid or choosing Sleep still sleeps it.");
+        section.Cells.Add(Switch("Keep the screen on too", "display", Ui.Yellow, settings.AwakeKeepDisplayOn, v => settings.AwakeKeepDisplayOn = v));
+        section.Cells.Add(Switch("Start keeping awake when Shiny Notch opens", "power", Ui.Green, settings.AwakeOnLaunch, v => settings.AwakeOnLaunch = v));
+        section.Cells.Add(Switch("Show a cup on the closed notch while it's on", "cup.and.saucer.fill", Ui.Yellow, settings.AwakeShowInPeek, v => settings.AwakeShowInPeek = v));
         return section;
     }
 

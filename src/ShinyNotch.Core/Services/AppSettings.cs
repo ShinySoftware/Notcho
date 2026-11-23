@@ -262,6 +262,27 @@ public sealed class AppSettings
         set => this.Set(nameof(this.CalculatorCopyOnEquals), value);
     }
 
+    /// <summary>While keeping awake, the screen stays on too, rather than only the computer.</summary>
+    public bool AwakeKeepDisplayOn
+    {
+        get => this.Bool(nameof(this.AwakeKeepDisplayOn), true);
+        set => this.Set(nameof(this.AwakeKeepDisplayOn), value);
+    }
+
+    /// <summary>Start keeping awake, until it's stopped, whenever the app opens.</summary>
+    public bool AwakeOnLaunch
+    {
+        get => this.Bool(nameof(this.AwakeOnLaunch), false);
+        set => this.Set(nameof(this.AwakeOnLaunch), value);
+    }
+
+    /// <summary>A cup on the closed notch while keeping awake.</summary>
+    public bool AwakeShowInPeek
+    {
+        get => this.Bool(nameof(this.AwakeShowInPeek), true);
+        set => this.Set(nameof(this.AwakeShowInPeek), value);
+    }
+
     /// <summary>The microphone voice notes record from, by its device id; null is the system default.</summary>
     public string? VoiceNoteInput
     {

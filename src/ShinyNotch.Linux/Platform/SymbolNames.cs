@@ -56,6 +56,10 @@ static class SymbolNames
         ["plus"] = ["list-add-symbolic"],
         ["plus.circle.fill"] = ["list-add-symbolic"],
         ["power"] = ["system-shutdown-symbolic"],
+        // Keep awake. Few themes have a cup; an eye that's open is the nearest everywhere else.
+        ["cup.and.saucer.fill"] = ["caffeine-cup-full-symbolic", "view-reveal-symbolic"],
+        ["infinity"] = ["media-playlist-repeat-symbolic"],
+        ["display"] = ["video-display-symbolic", "display-brightness-symbolic"],
         ["shippingbox.fill"] = ["package-x-generic-symbolic"],
         ["sparkles"] = ["starred-symbolic"],
         ["speedometer"] = ["power-profile-performance-symbolic", "preferences-system-time-symbolic"],

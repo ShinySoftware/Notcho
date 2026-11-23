@@ -123,6 +123,11 @@ static class SymbolGlyphs
         ["textformat.size.smaller"] = "",
         ["square.and.pencil"] = "",
 
+        // Keep awake: a cup (Cafe), repeat for "until I stop", and a monitor for the screen.
+        ["cup.and.saucer.fill"] = "\uEC32",
+        ["infinity"] = "\uE8EE",
+        ["display"] = "\uE7F4",
+
         // Settings and the rest
         ["arrow.left.and.right"] = "",
         ["arrow.left.and.right.square"] = "",

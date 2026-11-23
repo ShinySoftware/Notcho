@@ -76,6 +76,7 @@
     { id: 'clipboard', icon: 'clipboard-list', name: 'Clipboard', c: '#64D2FF', side: 'r' },
     { id: 'calendar', icon: 'calendar-days', name: 'Calendar', c: '#FF453A', side: 'r' },
     { id: 'timer', icon: 'timer', name: 'Timer', c: '#FF9F0A', side: 'r' },
+    { id: 'awake', icon: 'coffee', name: 'Keep Awake', c: '#FFD60A', side: 'r' },
     { id: 'calculator', icon: 'calculator', name: 'Calculator', c: '#FF9F0A', side: 'r' },
     { id: 'prompter', icon: 'align-left', name: 'Teleprompter', c: '#FFD60A', side: 'r' }
   ];
@@ -893,6 +894,59 @@
   };
 
   // ======================================================================
+  //  KEEP AWAKE
+  // ======================================================================
+  // The browser can't hold off the computer's sleep, but it can keep the screen on while this page shows:
+  // the Screen Wake Lock, where there is one.
+  const AW = { on: false, end: 0, total: 0, display: store.get('awDisplay', true), to: 0, lock: null };
+  const AW_PRESETS = [15, 30, 60, 120, 240];
+  const awName = m => m >= 60 ? `${m / 60} hour${m === 60 ? '' : 's'}` : `${m} min`;
+  const hms = s => { s = Math.max(0, Math.ceil(s)); return s >= 3600 ? `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}` : mss(s); };
+  const awLeft = () => AW.on && AW.end ? Math.max(0, (AW.end - Date.now()) / 1000) : 0;
+  async function awLock() {
+    const want = AW.on && AW.display;
+    if (want && !AW.lock && navigator.wakeLock) {
+      try { AW.lock = await navigator.wakeLock.request('screen'); AW.lock.addEventListener('release', () => { AW.lock = null; }); } catch { /* not allowed here */ }
+    } else if (!want && AW.lock) {
+      AW.lock.release(); AW.lock = null;
+    }
+  }
+  function awStart(mins) {
+    clearTimeout(AW.to);
+    Object.assign(AW, { on: true, total: mins * 60, end: mins ? Date.now() + mins * 60e3 : 0 });
+    if (mins) AW.to = setTimeout(awStop, mins * 60e3);
+    awLock(); renderPeek(); refresh();
+  }
+  function awStop() {
+    clearTimeout(AW.to);
+    Object.assign(AW, { on: false, end: 0, total: 0 });
+    awLock(); renderPeek(); refresh();
+  }
+  function awPaint() {
+    const fg = $('#awFg');
+    if (!fg) return;
+    const C2 = 2 * Math.PI * 56;
+    fg.style.strokeDashoffset = AW.end ? C2 * (1 - awLeft() / AW.total) : AW.on ? 0 : C2;
+    $('#awLbl').textContent = AW.end ? hms(awLeft()) : AW.on ? 'On' : 'Off';
+  }
+  const awakeView = {
+    html() {
+      const C2 = 2 * Math.PI * 56;
+      const offset = AW.end ? C2 * (1 - awLeft() / AW.total) : AW.on ? 0 : C2;
+      const cap = !AW.on ? 'Click to start' : AW.end ? `Until ${clock(new Date(AW.end))}` : 'Until you stop';
+      const pick = (on, act, data, body) => `<button class="n-btn${on ? ' yellow' : ''}" type="button" data-act="${act}"${data}>${body}</button>`;
+      const presets = [pick(AW.on && !AW.end, 'awGo', ' data-m="0"', `${ic('infinity')}Until I stop`)]
+        .concat(AW_PRESETS.map(m => pick(AW.on && AW.total === m * 60, 'awGo', ` data-m="${m}"`, awName(m)))).join('');
+      const options = (AW.on && AW.end ? `<button class="n-btn" type="button" data-act="awMore">${ic('plus')}15 min</button>` : '')
+        + (AW.on ? `<button class="n-btn red" type="button" data-act="awStop">${ic('x')}Stop</button>` : '')
+        + pick(AW.display, 'awDisplay', '', `${ic('monitor')}Screen stays on`);
+      return `<div class="timer"><button class="t-ring awake${AW.on ? ' on' : ''}" type="button" data-act="awToggle" aria-label="${AW.on ? 'Stop keeping awake' : 'Keep awake until I stop'}"><svg viewBox="0 0 128 128"><circle class="bg" cx="64" cy="64" r="56"/><circle class="fg" id="awFg" cx="64" cy="64" r="56" stroke-dasharray="${C2}" stroke-dashoffset="${offset}"/></svg>
+        <span class="lbl"><span class="cup">${ic('coffee')}</span><b id="awLbl">${AW.end ? hms(awLeft()) : AW.on ? 'On' : 'Off'}</b><span>${cap}</span></span></button>
+        <div class="grow"><div class="n-cap">Keep this computer awake</div><div class="presets">${presets}</div><div class="aw-opts">${options}</div></div></div>`;
+    }
+  };
+
+  // ======================================================================
   //  CALCULATOR
   // ======================================================================
   const CA = { toks: [], cur: '0', fresh: true, last: null, hist: store.get('calc', [{ e: '0.1 + 0.2', v: '0.3' }, { e: '1,299 × 12', v: '15588' }]) };
@@ -990,13 +1044,19 @@
   const VIEWS = {
     media: mediaView, weather: weatherView, tray: trayView, stats: statsView, processes: procView, capture: captureView,
     mirror: mirrorView, notes: notesView, tasks: tasksView, clipboard: clipView, calendar: calView, timer: timerView,
-    calculator: calcView, prompter: prompterView
+    awake: awakeView, calculator: calcView, prompter: prompterView
   };
 
   // ======================================================================
   //  PEEK / PANEL / HUD
   // ======================================================================
-  function peekParts() {
+  const peekParts = () => withCup(peekBase());
+  // A cup ahead of whatever ends the right wing, while keeping awake.
+  function withCup(p) {
+    if (!AW.on) return p;
+    return { ...p, rk: `${p.rk}|cup`, right: `<span class="ico" style="color:var(--n-yellow)">${ic('coffee')}</span>${p.right}` };
+  }
+  function peekBase() {
     const tr = track();
     const left = `<span class="p-art" style="background:${artBg(tr)}"></span><span class="p-bars ${M.playing ? 'on' : ''}" style="--accent:${tr.c}"><i></i><i></i><i></i><i></i></span>`;
     if (C.recording) return { left, rk: 'rec', right: `<span class="rec"></span><span id="pkR">${mss((Date.now() - C.recStart) / 1000)}</span>` };
@@ -1258,6 +1318,11 @@
       refresh(); renderPeek();
     },
     tmCancel: () => { clearTimeout(TM.to); Object.assign(TM, { running: false, paused: false }); refresh(); renderPeek(); },
+    awGo: b => awStart(+b.dataset.m),
+    awToggle: () => { if (AW.on) awStop(); else awStart(0); },
+    awStop: () => awStop(),
+    awMore: () => { AW.end += 15 * 60e3; AW.total += 15 * 60; clearTimeout(AW.to); AW.to = setTimeout(awStop, AW.end - Date.now()); refresh(); },
+    awDisplay: () => { AW.display = !AW.display; store.set('awDisplay', AW.display); awLock(); refresh(); },
     ck: b => calcKey(b.dataset.k),
     cCopy: () => { const raw = CA.cur; copyText(raw); addClip(raw); toast(`Copied ${raw}`, { icon: 'copy' }); },
     cHist: b => { CA.cur = CA.hist[+b.dataset.i].v; CA.fresh = true; refresh(); },
@@ -1479,6 +1544,7 @@
   function secondTick() {
     mediaTick();
     if (TM.running && !TM.paused) timerPaint();
+    if (AW.end) awPaint();
     renderPeek();
     if (S.mode === 'panel' && S.tab === 'calendar' && new Date().getSeconds() === 0) refresh();
     const d = new Date();
