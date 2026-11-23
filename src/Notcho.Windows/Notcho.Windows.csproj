@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <ShinyDIExtensionMethodName>AddPlatformServices</ShinyDIExtensionMethodName>
+        <ShinyDIExtensionNamespace>Notcho.Windows</ShinyDIExtensionNamespace>
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+        <!-- Lets the head be compile-checked off Windows: -t:Compile stops before MakePri, which only runs on Windows. -->
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <OutputType>WinExe</OutputType>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <IsPackable>false</IsPackable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <RootNamespace>Notcho</RootNamespace>
+        <AssemblyName>Notcho.Windows</AssemblyName>
+
+        <ApplicationTitle>Notcho</ApplicationTitle>
+        <ApplicationId>net.shiny.notcho</ApplicationId>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <!-- Unpackaged: a plain exe, started at login through the Run key rather than an MSIX startup task. -->
+        <WindowsPackageType>None</WindowsPackageType>
+        <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <MauiIcon Include="../Notcho/Resources/AppIcon/appicon.png" Link="Resources/AppIcon/appicon.png" Color="#000000" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <!-- Brightness lives in WMI, GPU load in the performance counters, display changes in SystemEvents. -->
+        <PackageReference Include="System.Management" />
+        <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+        <PackageReference Include="Microsoft.Win32.SystemEvents" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Notcho.Core/Notcho.Core.csproj" />
+    </ItemGroup>
+
+    <!-- Referenced here too, not only through Core: Core is net10.0, so these resolve their Windows
+         assets only when this head asks for them. -->
+    <ItemGroup>
+        <PackageReference Include="Shiny.Audio" />
+        <PackageReference Include="Shiny.Calendar" />
+        <PackageReference Include="Shiny.Core" />
+        <PackageReference Include="Shiny.Extensions.Stores" />
+        <PackageReference Include="Shiny.Maui.Controls" />
+        <PackageReference Include="Shiny.Maui.Controls.Camera" />
+        <PackageReference Include="Shiny.Maui.Controls.Analysis.Barcode" />
+        <PackageReference Include="Shiny.Maui.Controls.Desktop" />
+        <PackageReference Include="Shiny.Speech" />
+    </ItemGroup>
+</Project>

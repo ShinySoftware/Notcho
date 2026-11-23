@@ -1,4 +1,4 @@
-/* Shiny Notch, the browser copy. Peek, panel and HUD modes, fourteen tabs, the controls bar,
+/* Notcho, the browser copy. Peek, panel and HUD modes, fourteen tabs, the controls bar,
    the quick entry popup and Settings, plus the site's own animations at the bottom. */
 (() => {
   'use strict';
@@ -12,8 +12,8 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('shinynotch.' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem('shinynotch.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+    get(k, d) { try { const v = localStorage.getItem('notcho.' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('notcho.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
   };
 
   // ---------- icons (lucide's node data, rendered to strings) ----------
@@ -394,7 +394,7 @@
     ['Safari', '#0a84ff', 14, 1840, 120, 340], ['Xcode', '#64d2ff', 28, 3120, 880, 12], ['Music', '#ff375f', 3, 420, 40, 220],
     ['Slack', '#bf5af2', 6, 980, 30, 64], ['Figma', '#ff9f0a', 11, 1460, 22, 48], ['Terminal', '#8e8e93', 1, 96, 2, 0],
     ['Finder', '#64d2ff', 1, 210, 10, 0], ['Code', '#0a84ff', 9, 1210, 60, 8], ['Docker', '#0a84ff', 12, 2280, 420, 96],
-    ['Shiny Notch', '#ffc93c', 1, 148, 1, 3], ['Mail', '#0a84ff', 2, 320, 14, 40], ['Notes', '#ffd60a', 1, 180, 4, 2]
+    ['Notcho', '#ffc93c', 1, 148, 1, 3], ['Mail', '#0a84ff', 2, 320, 14, 40], ['Notes', '#ffd60a', 1, 180, 4, 2]
   ].map(([n, c, cpu, mem, disk, net], id) => ({ id, n, c, cpu, mem, disk, net, b: { cpu, mem, disk, net } }));
   const P = { sort: 'cpu', desc: true, ask: -1, askT: 0 };
   const mem = mb => mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : Math.round(mb) + ' MB';
@@ -591,7 +591,7 @@
     const box = $('#mrBox');
     box.animate([{ filter: 'brightness(3)' }, { filter: 'none' }], { duration: 400 });
     addToTray({ name: `Mirror ${stamp(new Date())}.jpg`, ext: 'JPG', c: '#bf5af2', thumb: url }, true);
-    toast('Saved to Pictures/Shiny Notch and added to the tray', { icon: 'camera' });
+    toast('Saved to Pictures/Notcho and added to the tray', { icon: 'camera' });
   }
   const mirrorView = {
     html() {
@@ -1007,7 +1007,7 @@
   // ======================================================================
   //  TELEPROMPTER
   // ======================================================================
-  const DEFAULT_SCRIPT = "Welcome to Shiny Notch.\n\nThis is the teleprompter. Your script scrolls right under the camera, so your eyes stay on the lens while you read.\n\nPress the pencil to put your own words here. Slow it down with the turtle, speed it up with the rabbit, and make the text bigger when you sit back from the desk.\n\nThe notch stays open while it runs. Pause it and it folds back into the camera like it was never there.";
+  const DEFAULT_SCRIPT = "Welcome to Notcho.\n\nThis is the teleprompter. Your script scrolls right under the camera, so your eyes stay on the lens while you read.\n\nPress the pencil to put your own words here. Slow it down with the turtle, speed it up with the rabbit, and make the text bigger when you sit back from the desk.\n\nThe notch stays open while it runs. Pause it and it folds back into the camera like it was never there.";
   const SPEEDS = [6, 12, 18, 24, 36, 48];
   const PR = { script: store.get('script', DEFAULT_SCRIPT), running: false, y: 0, sp: 2, fs: 24, raf: 0, last: 0 };
   function prLoop(t) {
@@ -1249,7 +1249,7 @@
       const p = PROCS.find(x => x.id === id);
       if (P.ask !== id) { P.ask = id; clearTimeout(P.askT); P.askT = setTimeout(() => { P.ask = -1; const pb = $('#pBody'); if (pb) pb.innerHTML = procRows(); }, 3000); $('#pBody').innerHTML = procRows(); return; }
       P.ask = -1;
-      if (p.n === 'Shiny Notch') { toast('Nice try. Shiny Notch stays.', { icon: 'shield' }); $('#pBody').innerHTML = procRows(); return; }
+      if (p.n === 'Notcho') { toast('Nice try. Notcho stays.', { icon: 'shield' }); $('#pBody').innerHTML = procRows(); return; }
       const row = $(`tr[data-pid="${id}"]`);
       if (row) row.classList.add('gone');
       setTimeout(() => { PROCS.splice(PROCS.indexOf(p), 1); const pb = $('#pBody'); if (pb) pb.innerHTML = procRows(); }, 300);
@@ -1393,7 +1393,7 @@
       <div class="set-sec"><h5>HUD</h5><div class="set-box">
         <div class="set-row"><label for="setHv">Show volume changes</label><input class="switch" type="checkbox" id="setHv" data-set="hudVol" ${S.hudVol ? 'checked' : ''}></div>
         <div class="set-row"><label for="setHb">Show brightness changes</label><input class="switch" type="checkbox" id="setHb" data-set="hudBright" ${S.hudBright ? 'checked' : ''}></div></div></div>
-      <div class="set-sec"><h5>About</h5><div class="set-box"><div class="set-row"><span>Shiny Notch for the web<br><span class="n-ter" style="font-size:11px">A browser copy. Get the real one for your Mac.</span></span><a class="n-btn white" href="https://github.com/ShinySoftware/ShinyNotch/releases/latest" target="_blank" rel="noopener" style="text-decoration:none">Download</a></div></div></div>`;
+      <div class="set-sec"><h5>About</h5><div class="set-box"><div class="set-row"><span>Notcho for the web<br><span class="n-ter" style="font-size:11px">A browser copy. Get the real one for your Mac.</span></span><a class="n-btn white" href="https://github.com/ShinySoftware/Notcho/releases/latest" target="_blank" rel="noopener" style="text-decoration:none">Download</a></div></div></div>`;
   }
   function openSettings() {
     const s = $('#settings');
@@ -1670,7 +1670,7 @@
     ];
     const sec = $('#gallery'), tabs = $('#gTabs'), stage = $('#gStage'), cap = $('#gCap');
     tabs.innerHTML = SHOTS.map(([k, n], i) => `<button class="g-tab" type="button" role="tab" data-i="${i}">${n}</button>`).join('');
-    stage.innerHTML = SHOTS.map(([k, n]) => `<img class="g-shot" src="assets/screens/${k}.png" alt="Shiny Notch ${n} tab, screenshot" loading="lazy" width="640">`).join('');
+    stage.innerHTML = SHOTS.map(([k, n]) => `<img class="g-shot" src="assets/screens/${k}.png" alt="Notcho ${n} tab, screenshot" loading="lazy" width="640">`).join('');
     let cur = 0, timer = 0, visible = false;
     const show = i => {
       cur = (i + SHOTS.length) % SHOTS.length;

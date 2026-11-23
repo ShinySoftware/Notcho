@@ -1,10 +1,10 @@
-# Shiny Notch Source-Available License
+# Notcho Source-Available License
 
 **Version 1.0**
 
 Copyright © 2026 ShinySoft Technologies. All rights reserved.
 
-This license governs the Shiny Notch software, including its source code, compiled binaries, artwork, icons, screenshots, documentation and every other file in this repository (together, the **"Software"**). The Software is **not open source**. ShinySoft Technologies (**"ShinySoft"**, **"we"**) makes the source code publicly visible so people can read it, learn from it and use the app. We do **not** grant permission to copy, repackage or redistribute it.
+This license governs the Notcho software, including its source code, compiled binaries, artwork, icons, screenshots, documentation and every other file in this repository (together, the **"Software"**). The Software is **not open source**. ShinySoft Technologies (**"ShinySoft"**, **"we"**) makes the source code publicly visible so people can read it, learn from it and use the app. We do **not** grant permission to copy, repackage or redistribute it.
 
 By viewing, downloading, building or using the Software, you (**"you"**) agree to these terms. If you do not agree, do not use the Software.
 
@@ -14,7 +14,7 @@ As long as you comply with this license, ShinySoft grants you a limited, persona
 
 1. **View and study** the source code to learn how it works.
 2. **Build and run** the Software from source, unmodified or modified, on Macs you own or control, **for your own personal, non-commercial use only**.
-3. **Install and use** official builds published by ShinySoft at <https://github.com/ShinySoftware/ShinyNotch/releases>.
+3. **Install and use** official builds published by ShinySoft at <https://github.com/ShinySoftware/Notcho/releases>.
 4. **Fork** this repository on GitHub, and modify your fork, **only** to prepare and submit contributions (pull requests) back to this repository. A fork may not be used for any other purpose, and it remains subject to this license.
 5. **Quote short excerpts** of the source code, of a reasonable length, in commentary, teaching, bug reports or technical discussion, with attribution to ShinySoft Technologies and a link to this repository.
 
@@ -37,7 +37,7 @@ If you submit a pull request, patch, issue or other material to this repository 
 
 ## 4. Trademarks
 
-"Shiny Notch", "ShinySoft", "ShinySoft Technologies", and the Shiny Notch and ShinySoft logos are trademarks of ShinySoft Technologies. This license grants no right to use them, except to accurately say that the Software was made by ShinySoft Technologies.
+"Notcho", "ShinySoft", "ShinySoft Technologies", and the Notcho and ShinySoft logos are trademarks of ShinySoft Technologies. This license grants no right to use them, except to accurately say that the Software was made by ShinySoft Technologies.
 
 ## 5. Third-party and open-source components
 
@@ -69,7 +69,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL SHINYSOFT TECHNOLOGIES
 
 ## Commercial licensing
 
-For commercial use, redistribution, white-labelling or a custom build of Shiny Notch, contact ShinySoft Technologies:
+For commercial use, redistribution, white-labelling or a custom build of Notcho, contact ShinySoft Technologies:
 
 - <https://shinysoft.biz>
 - [allan@shinysoft.biz](mailto:allan@shinysoft.biz)

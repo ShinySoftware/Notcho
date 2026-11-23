@@ -1,12 +1,12 @@
 # Plan: shuffle, up next, playlists and search in the music tab
 
-The music tab (`src/ShinyNotch.Core/Views/MediaTab.cs`) shows what's playing, a scrubber and previous / play-pause / next. Users asked for three more things:
+The music tab (`src/Notcho.Core/Views/MediaTab.cs`) shows what's playing, a scrubber and previous / play-pause / next. Users asked for three more things:
 
 1. **Shuffle**: turn it on or off.
 2. **Up next**: see the tracks coming after this one.
 3. **Pick something to play**: choose a playlist, or search for a song.
 
-Shiny Notch is a remote control, not a player. Each platform reaches the player its own way, so what can be built depends on the platform and the player. This plan builds what each one can actually do, and hides any control the current player can't back up.
+Notcho is a remote control, not a player. Each platform reaches the player its own way, so what can be built depends on the platform and the player. This plan builds what each one can actually do, and hides any control the current player can't back up.
 
 ## What each platform can do
 
@@ -151,13 +151,13 @@ If we do it, it slots in as another `IMusicLibrary` used when the current player
 
 ## Files touched
 
-- `src/ShinyNotch.Core/Platform/INowPlayingService.cs`: `Shuffle`, `SetShuffle`
-- `src/ShinyNotch.Core/Platform/IMusicLibrary.cs`: new
-- `src/ShinyNotch.Core/Views/MediaTab.cs`: shuffle button, up next, browser
-- `src/ShinyNotch.Core/NotchController.cs`: pass the library to `MediaTab`
-- `src/ShinyNotch/Platform/MacNowPlayingService.cs`: shuffle, `IMusicLibrary`
-- `src/ShinyNotch.Windows/Platform/WindowsNowPlayingService.cs`: shuffle
-- `src/ShinyNotch.Linux/Platform/LinuxNowPlayingService.cs`: shuffle (and TrackList in 2b)
+- `src/Notcho.Core/Platform/INowPlayingService.cs`: `Shuffle`, `SetShuffle`
+- `src/Notcho.Core/Platform/IMusicLibrary.cs`: new
+- `src/Notcho.Core/Views/MediaTab.cs`: shuffle button, up next, browser
+- `src/Notcho.Core/NotchController.cs`: pass the library to `MediaTab`
+- `src/Notcho/Platform/MacNowPlayingService.cs`: shuffle, `IMusicLibrary`
+- `src/Notcho.Windows/Platform/WindowsNowPlayingService.cs`: shuffle
+- `src/Notcho.Linux/Platform/LinuxNowPlayingService.cs`: shuffle (and TrackList in 2b)
 - `README.md` / website: update the media feature description and screenshot
 
 ## Open questions

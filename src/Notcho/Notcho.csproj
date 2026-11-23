@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <ShinyDIExtensionMethodName>AddPlatformServices</ShinyDIExtensionMethodName>
+        <ShinyDIExtensionNamespace>Notcho.MacOS</ShinyDIExtensionNamespace>
+        <TargetFramework>net10.0-macos</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <IsPackable>false</IsPackable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <RootNamespace>Notcho</RootNamespace>
+
+        <!-- No space: the bundle is named from this, and a space in the .app name kept the platform's MauiMenuBar.bundle out of it (startup crash). The menu-bar name comes from CFBundleDisplayName. -->
+        <ApplicationTitle>Notcho</ApplicationTitle>
+        <ApplicationId>net.shiny.notcho</ApplicationId>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+        <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+        <!-- Apple silicon only: the camera notch only exists on Apple silicon MacBooks. One RID also keeps
+             Release from building a universal app (whose per-RID osx-arm64 folder is an unsigned,
+             incomplete intermediate - the real app would be one level up). -->
+        <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
+    </PropertyGroup>
+
+    <!-- Distribution outside the App Store: Developer ID signing with the hardened runtime, which
+         notarization requires. CI passes CodesignKey; local Release builds without it stay ad-hoc signed,
+         and without the hardened runtime: its library validation refuses ad-hoc signed dylibs (each is a
+         "different team"), so an ad-hoc hardened build dies in dyld before it starts. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+        <UseHardenedRuntime Condition="'$(CodesignKey)' != ''">true</UseHardenedRuntime>
+        <EnableCodeSigning>true</EnableCodeSigning>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS" />
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS.Essentials" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- appicon.svg is the source; the PNG is rendered from it (rsvg-convert -w 1024 -h 1024) because
+             the platform's icon step resizes with sips, which does not read SVG. -->
+        <MauiIcon Include="Resources/AppIcon/appicon.png" />
+        <None Include="Resources/AppIcon/appicon.svg" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+        <PackageReference Include="Microsoft.Maui.DevFlow.Agent" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Notcho.Core/Notcho.Core.csproj" />
+    </ItemGroup>
+
+    <!-- Referenced here too, not only through Core: Core is net10.0, so these resolve their macOS
+         assets only when this head asks for them. -->
+    <ItemGroup>
+        <PackageReference Include="Shiny.Audio" />
+        <PackageReference Include="Shiny.Calendar" />
+        <PackageReference Include="Shiny.Core" />
+        <PackageReference Include="Shiny.Extensions.Stores" />
+        <PackageReference Include="Shiny.Maui.Controls" />
+        <PackageReference Include="Shiny.Maui.Controls.Camera" />
+        <PackageReference Include="Shiny.Maui.Controls.Analysis.Barcode" />
+        <PackageReference Include="Shiny.Maui.Controls.Desktop" />
+        <PackageReference Include="Shiny.Speech" />
+    </ItemGroup>
+</Project>

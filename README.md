@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/screenshots/icon.png" width="128" alt="Shiny Notch icon: a nacho hat" />
+  <img src="docs/screenshots/icon.png" width="128" alt="Notcho icon: a nacho hat" />
 </p>
 
-# Shiny Notch
+# Notcho
 
 <p align="center"><b><i>Notcho Notcho Man! We got all the "fixins".</i></b></p>
 
@@ -10,9 +10,9 @@ A macOS app that turns the MacBook camera notch into a live panel. It's built wi
 
 Hover the notch to open it, and move away to let it fold back into the camera. Apple silicon only.
 
-**[Try it in your browser at shinysoftware.github.io/ShinyNotch](https://shinysoftware.github.io/ShinyNotch/)**: the product website has a working copy of the notch at the top of the page.
+**[Try it in your browser at shinysoftware.github.io/Notcho](https://shinysoftware.github.io/Notcho/)**: the product website has a working copy of the notch at the top of the page.
 
-The notch itself is shared code (`ShinyNotch.Core`) over a small set of platform interfaces. The macOS app is the main one; Windows and Linux heads build from the same code, ship with each release, and are still being tested.
+The notch itself is shared code (`Notcho.Core`) over a small set of platform interfaces. The macOS app is the main one; Windows and Linux heads build from the same code, ship with each release, and are still being tested.
 
 <p align="center">
   <a href="https://shinysoft.biz">
@@ -26,23 +26,23 @@ The notch itself is shared code (`ShinyNotch.Core`) over a small set of platform
 </p>
 
 <p align="center">
-  <a href="https://github.com/ShinySoftware/ShinyNotch/releases/latest"><img src="https://img.shields.io/github/v/release/ShinySoftware/ShinyNotch?style=flat-square&label=download" alt="Latest release" /></a>
+  <a href="https://github.com/ShinySoftware/Notcho/releases/latest"><img src="https://img.shields.io/github/v/release/ShinySoftware/Notcho?style=flat-square&label=download" alt="Latest release" /></a>
   <img src="https://img.shields.io/badge/macOS-14%2B%20·%20Apple%20silicon-000000?style=flat-square&logo=apple" alt="macOS 14+ on Apple silicon" />
   <a href="https://www.shinylib.net"><img src="https://img.shields.io/badge/built%20with-Shiny%20.NET-6f42c1?style=flat-square" alt="Built with Shiny .NET" /></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-source--available-red?style=flat-square" alt="License: source-available, no redistribution" /></a>
 </p>
 
-> **Shiny Notch is not open source.** The code is published so you can read it, learn from it and build it for yourself, but you may not copy, repackage, rebrand or redistribute it. See [License](#license). The Shiny libraries it's built on *are* open source (MIT); see [Built on Shiny open source](#built-on-shiny-open-source).
+> **Notcho is not open source.** The code is published so you can read it, learn from it and build it for yourself, but you may not copy, repackage, rebrand or redistribute it. See [License](#license). The Shiny libraries it's built on *are* open source (MIT); see [Built on Shiny open source](#built-on-shiny-open-source).
 
 ## Download
 
-Builds are on the [Releases](https://github.com/ShinySoftware/ShinyNotch/releases) page. These are the only official builds. If you got Shiny Notch from anywhere else, it isn't ours.
+Builds are on the [Releases](https://github.com/ShinySoftware/Notcho/releases) page. These are the only official builds. If you got Notcho from anywhere else, it isn't ours.
 
 | Platform | Download | |
 |---|---|---|
-| macOS 14+, Apple silicon | `ShinyNotch-<version>.zip` | Signed and notarized. Updates itself when a new release is out. |
-| Windows 10/11, x64 or Arm64 | `ShinyNotch-<version>-windows-<arch>-setup.exe` | Installs for the current user, no administrator needed. Not code-signed yet, so SmartScreen warns about an unknown publisher. |
-| Linux, x64 or arm64 | `ShinyNotch-<version>-linux-<arch>.deb` / `.rpm` | Needs GTK 4. |
+| macOS 14+, Apple silicon | `Notcho-<version>.zip` | Signed and notarized. Updates itself when a new release is out. |
+| Windows 10/11, x64 or Arm64 | `Notcho-<version>-windows-<arch>-setup.exe` | Installs for the current user, no administrator needed. Not code-signed yet, so SmartScreen warns about an unknown publisher. |
+| Linux, x64 or arm64 | `Notcho-<version>-linux-<arch>.deb` / `.rpm` | Needs GTK 4. |
 
 `SHA256SUMS.txt` in each release has the checksum of every download. Windows and Linux builds don't update themselves yet: install the new release over the old one.
 
@@ -96,7 +96,7 @@ One-click shortcuts into [macshot](https://macshot.io), the open-source screensh
 <img src="docs/screenshots/capture.png" width="668" alt="Capture tab with macshot shortcuts" />
 
 ### Mirror
-Your camera as a mirror, flipped the way a mirror is. Step through looks (Mono, Noir, Sepia, Vivid, Chrome and more), pick the camera when you have more than one, and take a photo: it's saved to `Pictures/Shiny Notch` with the look applied, and dropped in the File Tray. Brightness works on the camera itself for a USB webcam, so Teams and browsers see it too; on the built-in camera it brightens the mirror only, and the slider says which. The camera only runs while the tab is open.
+Your camera as a mirror, flipped the way a mirror is. Step through looks (Mono, Noir, Sepia, Vivid, Chrome and more), pick the camera when you have more than one, and take a photo: it's saved to `Pictures/Notcho` with the look applied, and dropped in the File Tray. Brightness works on the camera itself for a USB webcam, so Teams and browsers see it too; on the built-in camera it brightens the mirror only, and the slider says which. The camera only runs while the tab is open.
 
 <img src="docs/screenshots/mirror.png" width="668" alt="Mirror tab (the camera picture is blurred here)" />
 
@@ -126,7 +126,7 @@ A ring that drains as the countdown runs, presets from 1 to 45 minutes, plus +1 
 <img src="docs/screenshots/timer.png" width="668" alt="Timer tab" />
 
 ### Keep Awake
-Stops the computer going to sleep, or the screen going dark, while you're away from the keyboard, the way Amphetamine and Caffeine do. Keep it awake until you stop it, or for 15 minutes to 4 hours, with +15 min to stretch a session that's running. Click the ring to switch it on or off. The screen stays on too unless you turn that off, and changing it applies straight away. A cup shows on the closed notch while it's on. Settings can start it whenever Shiny Notch opens. Closing the lid or choosing Sleep still sleeps the computer: only sleep from sitting idle is held off.
+Stops the computer going to sleep, or the screen going dark, while you're away from the keyboard, the way Amphetamine and Caffeine do. Keep it awake until you stop it, or for 15 minutes to 4 hours, with +15 min to stretch a session that's running. Click the ring to switch it on or off. The screen stays on too unless you turn that off, and changing it applies straight away. A cup shows on the closed notch while it's on. Settings can start it whenever Notcho opens. Closing the lid or choosing Sleep still sleeps the computer: only sleep from sitting idle is held off.
 
 ### Calculator
 A pocket calculator, clicked rather than typed: × and ÷ go before + and −, and it works in decimals, so 0.1 + 0.2 is 0.3. Recent sums are kept beside the keypad; click one to bring its answer back. The copy button puts the number on the clipboard without thousands separators, so it pastes anywhere. Settings can turn off digit grouping or the history, or copy every answer as you press =.
@@ -150,11 +150,11 @@ Changes from the keys or Control Centre flash in the notch.
 - **Pin** (⦿) keeps the panel open.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
 - **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
-- It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Shiny Notch again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
+- It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Notcho again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
 
 ## Website
 
-The product website lives in [`website/`](website/): plain HTML, CSS and JavaScript with no build step, including a browser copy of the notch (`website/app.js`). [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to [GitHub Pages](https://shinysoftware.github.io/ShinyNotch/) whenever `website/` changes on `main`. To preview it locally, open `website/index.html`, or serve the folder:
+The product website lives in [`website/`](website/): plain HTML, CSS and JavaScript with no build step, including a browser copy of the notch (`website/app.js`). [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes it to [GitHub Pages](https://shinysoftware.github.io/Notcho/) whenever `website/` changes on `main`. To preview it locally, open `website/index.html`, or serve the folder:
 
 ```bash
 python3 -m http.server -d website 8000
@@ -166,26 +166,26 @@ The screenshots in its gallery are copies of the ones in `docs/screenshots`, in 
 
 ```bash
 dotnet build
-open src/ShinyNotch/bin/Debug/net10.0-macos/osx-arm64/ShinyNotch.app
+open src/Notcho/bin/Debug/net10.0-macos/osx-arm64/Notcho.app
 ```
 
 For a release build:
 
 ```bash
 dotnet build -c Release
-open src/ShinyNotch/bin/Release/net10.0-macos/osx-arm64/ShinyNotch.app
+open src/Notcho/bin/Release/net10.0-macos/osx-arm64/Notcho.app
 ```
 
 Debug builds accept `--open <Media|Weather|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Awake|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
 
 ```bash
-src/ShinyNotch/bin/Debug/net10.0-macos/osx-arm64/ShinyNotch.app/Contents/MacOS/ShinyNotch --open Weather
+src/Notcho/bin/Debug/net10.0-macos/osx-arm64/Notcho.app/Contents/MacOS/Notcho --open Weather
 ```
 
-The icon's source is `src/ShinyNotch/Resources/AppIcon/appicon.svg`. After editing it, re-render the PNG the build uses:
+The icon's source is `src/Notcho/Resources/AppIcon/appicon.svg`. After editing it, re-render the PNG the build uses:
 
 ```bash
-rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src/ShinyNotch/Resources/AppIcon/appicon.png
+rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Notcho/Resources/AppIcon/appicon.png
 ```
 
 ## Libraries
@@ -240,7 +240,7 @@ rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src
 - **Now Playing** uses AppleScript, not MediaRemote. Since macOS 15.4 the system-wide now-playing API returns nothing to apps without an Apple entitlement, so only Music and Spotify are seen.
 - **Weather** comes from Open-Meteo, which converts units server-side, so switching °C/°F refetches. Forecasts are cached for 20 minutes per place.
 - **Text entry** lives in Settings, an ordinary window, and in the quick entry popup for tasks. The notch window is borderless and can never take keyboard focus.
-- **One codebase, three desktops.** `ShinyNotch.Core` holds the views, the controller, Settings and the services; each head (`ShinyNotch` for macOS, `ShinyNotch.Windows`, `ShinyNotch.Linux`) implements a handful of `Platform` interfaces (volume, brightness, system counters, now playing, files, location, icons) and registers them with Shiny's DI source generator. macshot's Capture tab is the one feature only the Mac has.
+- **One codebase, three desktops.** `Notcho.Core` holds the views, the controller, Settings and the services; each head (`Notcho` for macOS, `Notcho.Windows`, `Notcho.Linux`) implements a handful of `Platform` interfaces (volume, brightness, system counters, now playing, files, location, icons) and registers them with Shiny's DI source generator. macshot's Capture tab is the one feature only the Mac has.
 
 ## Known limits
 
@@ -253,16 +253,16 @@ rsvg-convert -w 1024 -h 1024 src/ShinyNotch/Resources/AppIcon/appicon.svg -o src
 
 ## Built on Shiny open source
 
-Shiny Notch is a showcase for **[Shiny .NET](https://www.shinylib.net)**, the free, MIT-licensed family of libraries for .NET MAUI, Blazor, ASP.NET Core and native apps that ShinySoft Technologies maintains. They supply the device, background, data and UI layers so an app can concentrate on what it does. The notch itself, the music bars, the settings page, open at login and the calendar all come from Shiny packages anyone can use in their own apps.
+Notcho is a showcase for **[Shiny .NET](https://www.shinylib.net)**, the free, MIT-licensed family of libraries for .NET MAUI, Blazor, ASP.NET Core and native apps that ShinySoft Technologies maintains. They supply the device, background, data and UI layers so an app can concentrate on what it does. The notch itself, the music bars, the settings page, open at login and the calendar all come from Shiny packages anyone can use in their own apps.
 
-| Shiny library | What Shiny Notch uses it for | Docs | Source |
+| Shiny library | What Notcho uses it for | Docs | Source |
 |---|---|---|---|
 | **Shiny.Maui.Controls** | `NotchView`: the black surface that grows out of the camera housing and morphs to fit the peek, the panel and the HUD | [shinylib.net/controls](https://www.shinylib.net/controls/) | [shinyorg/controls](https://github.com/shinyorg/controls) |
 | **Shiny.Maui.Controls.Desktop** | `INotchWindowService` (the borderless notch window, hover tracking and the camera cut-out's size), and file drop onto the tray | [Desktop controls](https://www.shinylib.net/controls/) | [shinyorg/controls](https://github.com/shinyorg/controls) |
 | **Shiny.Core** | Hosting and DI, platform permissions, and `IAppStartupInstaller` for open at login | [Core](https://www.shinylib.net/client/core/) | [shinyorg/shiny](https://github.com/shinyorg/shiny) |
 | **Shiny.Calendar** | Every calendar you have, and the events in the Calendar tab and the "meeting soon" peek | [Calendar](https://www.shinylib.net/client/calendarstore/) | [shinyorg/shiny](https://github.com/shinyorg/shiny) |
 
-Shiny Notch also runs on **[.NET MAUI for macOS (AppKit)](https://github.com/dotnet/maui-labs)**, the native AppKit backend for .NET MAUI (not Mac Catalyst). Shiny also maintains community MAUI backends for macOS and Apple TV in [mauiplatforms](https://github.com/shinyorg/mauiplatforms).
+Notcho also runs on **[.NET MAUI for macOS (AppKit)](https://github.com/dotnet/maui-labs)**, the native AppKit backend for .NET MAUI (not Mac Catalyst). Shiny also maintains community MAUI backends for macOS and Apple TV in [mauiplatforms](https://github.com/shinyorg/mauiplatforms).
 
 ### More from Shiny
 
@@ -289,7 +289,7 @@ Browse everything at **[shinylib.net](https://www.shinylib.net)** or on GitHub a
   </a>
 </p>
 
-Shiny Notch was designed and built by **[ShinySoft Technologies](https://shinysoft.biz)**, the company behind Shiny .NET. We've spent 25+ years shipping software for people who work away from a desk: fleets, warehouses, job sites, hospitals and connected hardware. We build apps like this one for clients, and we maintain the open-source libraries that make them possible.
+Notcho was designed and built by **[ShinySoft Technologies](https://shinysoft.biz)**, the company behind Shiny .NET. We've spent 25+ years shipping software for people who work away from a desk: fleets, warehouses, job sites, hospitals and connected hardware. We build apps like this one for clients, and we maintain the open-source libraries that make them possible.
 
 | Engagement | What you get |
 |---|---|
@@ -306,25 +306,25 @@ What we build:
 - **Modernization:** legacy .NET Framework and Xamarin apps moved onto current platforms
 - **AI:** practical, measured, and your data stays yours
 
-Want something like Shiny Notch for your product or team? **[shinysoft.biz](https://shinysoft.biz)** · **[allan@shinysoft.biz](mailto:allan@shinysoft.biz)** · [LinkedIn](https://www.linkedin.com/company/shiny-soft) · [BlueSky](https://bsky.app/profile/shinylib.net) · [YouTube](https://www.youtube.com/@GoneDotnet)
+Want something like Notcho for your product or team? **[shinysoft.biz](https://shinysoft.biz)** · **[allan@shinysoft.biz](mailto:allan@shinysoft.biz)** · [LinkedIn](https://www.linkedin.com/company/shiny-soft) · [BlueSky](https://bsky.app/profile/shinylib.net) · [YouTube](https://www.youtube.com/@GoneDotnet)
 
 ## License
 
 **Copyright © 2026 ShinySoft Technologies. All rights reserved.**
 
-Shiny Notch is **source-available, not open source**. The full terms are in [LICENSE.md](LICENSE.md). In short:
+Notcho is **source-available, not open source**. The full terms are in [LICENSE.md](LICENSE.md). In short:
 
 | You may | You may not |
 |---|---|
 | Read and study the source code | Copy the app, or substantial parts of it, into another product |
 | Build and run it on your own Macs for your own personal, non-commercial use | Repackage, rebrand, rename or re-sign it and distribute it |
-| Download and use the official builds from [Releases](https://github.com/ShinySoftware/ShinyNotch/releases) | Publish it, or anything derived from it, to the Mac App Store, Setapp, Homebrew or any other channel |
+| Download and use the official builds from [Releases](https://github.com/ShinySoftware/Notcho/releases) | Publish it, or anything derived from it, to the Mac App Store, Setapp, Homebrew or any other channel |
 | Fork on GitHub only to send a pull request back to this repository | Sell it, bundle it, or offer it as a hosted or paid service |
 | Report issues and suggest features | Remove or change the ShinySoft Technologies name, logo, copyright or license notices |
 
-"Shiny Notch", "ShinySoft Technologies" and the ShinySoft and Shiny Notch logos are trademarks of ShinySoft Technologies and are not licensed for your use.
+"Notcho", "ShinySoft Technologies" and the ShinySoft and Notcho logos are trademarks of ShinySoft Technologies and are not licensed for your use.
 
-The **Shiny .NET libraries** Shiny Notch depends on are separate projects under the [MIT license](https://github.com/shinyorg/shiny/blob/v5/LICENSE.md), and you're free to use them in your own apps. Other third-party components keep their own licenses. This license covers only the Shiny Notch application.
+The **Shiny .NET libraries** Notcho depends on are separate projects under the [MIT license](https://github.com/shinyorg/shiny/blob/v5/LICENSE.md), and you're free to use them in your own apps. Other third-party components keep their own licenses. This license covers only the Notcho application.
 
 For commercial licensing, white-labelling or a custom build, contact [allan@shinysoft.biz](mailto:allan@shinysoft.biz).
 

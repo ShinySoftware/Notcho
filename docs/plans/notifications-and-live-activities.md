@@ -1,6 +1,6 @@
 # Plan: notifications and Live Activities
 
-Shiny Notch sits over the top-centre of the screen, above the menu bar and every app. macOS shows its own transient UI up there too: notification banners and alerts, and (from macOS 26) Live Activities mirrored from a paired iPhone. This plan covers two things:
+Notcho sits over the top-centre of the screen, above the menu bar and every app. macOS shows its own transient UI up there too: notification banners and alerts, and (from macOS 26) Live Activities mirrored from a paired iPhone. This plan covers two things:
 
 1. **Get out of the way.** The notch must never cover a banner, an alert or a Live Activity.
 2. **Mirror notifications, as an option.** Show incoming notifications in the notch, Dynamic Island style.

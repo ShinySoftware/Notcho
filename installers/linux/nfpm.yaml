@@ -10,7 +10,7 @@
 # Recommends are the tools and services the head shells out to or asks over D-Bus, each optional:
 # pactl for the volume slider, xdg-open for opening files, canberra-gtk-play for the timer's sound,
 # GeoClue for the weather's location. MPRIS and logind need no package.
-name: shinynotch
+name: notcho
 version: ${VERSION}
 arch: ${ARCH}
 platform: linux
@@ -18,7 +18,7 @@ section: utils
 priority: optional
 maintainer: ShinySoft Technologies
 vendor: ShinySoft Technologies
-homepage: https://github.com/ShinySoftware/ShinyNotch
+homepage: https://github.com/ShinySoftware/Notcho
 license: Proprietary
 description: |
   A live panel at the top of the screen: now playing, weather, timers, a teleprompter, notes,
@@ -26,19 +26,19 @@ description: |
 
 contents:
   - src: ${PUBLISH_DIR}
-    dst: /opt/shinynotch
+    dst: /opt/notcho
     type: tree
 
-  - src: /opt/shinynotch/ShinyNotch.Linux
-    dst: /usr/bin/shinynotch
+  - src: /opt/notcho/Notcho.Linux
+    dst: /usr/bin/notcho
     type: symlink
 
-  # Named for the GTK application id (net.shiny.notch), so the desktop matches the running app to it.
-  - src: installers/linux/net.shiny.notch.desktop
-    dst: /usr/share/applications/net.shiny.notch.desktop
+  # Named for the GTK application id (net.shiny.notcho), so the desktop matches the running app to it.
+  - src: installers/linux/net.shiny.notcho.desktop
+    dst: /usr/share/applications/net.shiny.notcho.desktop
 
-  - src: src/ShinyNotch/Resources/AppIcon/appicon.svg
-    dst: /usr/share/icons/hicolor/scalable/apps/net.shiny.notch.svg
+  - src: src/Notcho/Resources/AppIcon/appicon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/net.shiny.notcho.svg
 
 scripts:
   postinstall: installers/linux/after-change.sh

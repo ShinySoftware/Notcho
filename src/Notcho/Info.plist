@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- A menu-bar agent: no Dock icon, no app menu. Settings open from the tray icon. -->
+    <key>CFBundleDisplayName</key>
+    <string>Notcho</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Notcho reads what Music and Spotify are playing and controls playback from the notch.</string>
+    <key>NSLocationUsageDescription</key>
+    <string>Notcho shows the weather where you are.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Notcho shows the weather where you are.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Notcho shows your camera as a mirror in the notch, and takes a photo when you ask.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Notcho records voice notes from your microphone, and listens as you read the teleprompter when you ask it to follow your voice.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Notcho follows along as you read the teleprompter, scrolling with your voice and marking the word you're on.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Notcho shows your upcoming events in the notch.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Notcho shows your upcoming events in the notch.</string>
+</dict>
+</plist>

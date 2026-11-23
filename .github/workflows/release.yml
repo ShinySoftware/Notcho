@@ -4,7 +4,7 @@ name: Release
 # installer and .deb/.rpm packages for Linux, for x64 and arm64 where the platform has both. Each platform builds
 # on its own runner; the last job checksums everything and publishes it as one release.
 #
-# The macOS asset's name, ShinyNotch-<version>.zip, is what installed copies look for to update themselves
+# The macOS asset's name, Notcho-<version>.zip, is what installed copies look for to update themselves
 # (MacAppUpdater.AssetName): never rename it. Windows and Linux have no updater, so theirs are free.
 on:
   push:
@@ -23,10 +23,10 @@ env:
   # newest, and a new one can need a different Xcode overnight. Windows installs maui-windows from the same set.
   WORKLOAD_VERSION: 10.0.404
   DOTNET_VERSION: 10.0.4xx
-  WINDOWS_PROJECT: src/ShinyNotch.Windows/ShinyNotch.Windows.csproj
-  LINUX_PROJECT: src/ShinyNotch.Linux/ShinyNotch.Linux.csproj
+  WINDOWS_PROJECT: src/Notcho.Windows/Notcho.Windows.csproj
+  LINUX_PROJECT: src/Notcho.Linux/Notcho.Linux.csproj
   NFPM_VERSION: 2.48.0
-  APP_PATH: src/ShinyNotch/bin/Release/net10.0-macos/osx-arm64/ShinyNotch.app
+  APP_PATH: src/Notcho/bin/Release/net10.0-macos/osx-arm64/Notcho.app
 
 jobs:
   version:
@@ -102,7 +102,7 @@ jobs:
 
       - name: Build
         run: >
-          dotnet build src/ShinyNotch/ShinyNotch.csproj -c Release
+          dotnet build src/Notcho/Notcho.csproj -c Release
           -p:CodesignKey="$SIGNING_IDENTITY"
           -p:ApplicationDisplayVersion="$APP_VERSION"
           -p:ApplicationVersion="${{ github.run_number }}"
@@ -145,7 +145,7 @@ jobs:
       - name: Package
         run: |
           mkdir -p artifacts
-          ditto -c -k --keepParent "$APP_PATH" "artifacts/ShinyNotch-$VERSION.zip"
+          ditto -c -k --keepParent "$APP_PATH" "artifacts/Notcho-$VERSION.zip"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -203,7 +203,7 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           foreach ($arch in 'x64', 'arm64') {
             & $iscc.FullName "/DAppVersion=$env:VERSION" "/DFileVersion=$env:APP_VERSION" "/DArch=$arch" `
-              "/DSourceDir=$PWD\publish\win-$arch" "/DOutputDir=$PWD\artifacts" installers\windows\ShinyNotch.iss
+              "/DSourceDir=$PWD\publish\win-$arch" "/DOutputDir=$PWD\artifacts" installers\windows\Notcho.iss
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
@@ -257,7 +257,7 @@ jobs:
             VERSION="$VERSION" ARCH="$ARCH" PUBLISH_DIR="publish/linux-$arch" \
               envsubst < installers/linux/nfpm.yaml > "$RUNNER_TEMP/nfpm-$arch.yaml"
             for format in deb rpm; do
-              nfpm package -f "$RUNNER_TEMP/nfpm-$arch.yaml" -p "$format" -t "artifacts/ShinyNotch-$VERSION-linux-$arch.$format"
+              nfpm package -f "$RUNNER_TEMP/nfpm-$arch.yaml" -p "$format" -t "artifacts/Notcho-$VERSION-linux-$arch.$format"
             done
           done
 
@@ -294,7 +294,7 @@ jobs:
         run: >
           gh release create "$TAG" artifacts/*
           --repo "${{ github.repository }}"
-          --title "Shiny Notch $VERSION"
+          --title "Notcho $VERSION"
           --generate-notes
           --target "$GITHUB_SHA"
           $PRERELEASE
