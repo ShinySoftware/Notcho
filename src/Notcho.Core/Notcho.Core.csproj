@@ -30,6 +30,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- For the top of Settings on every head: a 256 px copy of src/Notcho/Resources/AppIcon/appicon.png
+             (sips -z 256 256 ... after the icon changes). -->
+        <EmbeddedResource Include="Resources/AppIcon.png" LogicalName="Notcho.AppIcon.png" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- The heads build platform tabs (macshot's Capture tab) from the same Ui helpers. -->
         <InternalsVisibleTo Include="Notcho" />
         <InternalsVisibleTo Include="Notcho.Windows" />

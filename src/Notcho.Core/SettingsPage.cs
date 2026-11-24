@@ -216,9 +216,10 @@ public sealed class SettingsPage : ContentPage
                 settings.OpenNotchFill = fill;
         }
 
-        var glass = Ui.Platform.CanFrost
-            ? " Frosted glass blurs what's behind the notch under a light tint."
-            : " Frosted glass can't blur what's behind the notch here, so it shows as a see-through tint.";
+        // Frosted glass is only offered where the head really blurs behind the window: elsewhere it would be
+        // a see-through tint, which reads badly over a busy desktop.
+        var canFrost = Ui.Platform.CanFrost;
+        var glass = canFrost ? " Frosted glass blurs what's behind the notch under a light tint." : "";
         var section = Section(
             closed ? "Closed Notch Colour" : "Open Notch Colour",
             (closed
@@ -226,6 +227,9 @@ public sealed class SettingsPage : ContentPage
                 : "The panel the notch opens into. A gradient runs from the top to the bottom. The notch's text is white, so deeper colours read best.") + glass
         );
         var fill = Current();
+        // Glass saved where it isn't offered (settings brought over from a Mac) becomes its tint, as a colour.
+        if (fill.IsGlass && !canFrost)
+            Save(fill = fill.From == Colors.Black ? NotchFill.Black : new NotchFill(NotchFillKind.Color, fill.From, fill.From));
         var (fromCell, showFromColor) = ColorCell("Colour", fill.From, c => Save(Current() with { From = c }));
         var (toCell, showToColor) = ColorCell("Bottom", fill.To, c => Save(Current() with { To = c }));
         var showFrom = Optional(fromCell, fill.Kind != NotchFillKind.Black);
@@ -241,7 +245,7 @@ public sealed class SettingsPage : ContentPage
         ShowRows(fill);
 
         section.Cells.Add(ChoiceCell("Style", "paintbrush.fill", Ui.Pink,
-            [(NotchFillKind.Black, "Black"), (NotchFillKind.Color, "Colour"), (NotchFillKind.Gradient, "Gradient"), (NotchFillKind.Glass, "Frosted Glass")],
+            [(NotchFillKind.Black, "Black"), (NotchFillKind.Color, "Colour"), (NotchFillKind.Gradient, "Gradient"), .. (canFrost ? [(NotchFillKind.Glass, "Frosted Glass")] : Array.Empty<(NotchFillKind, string)>())],
             fill.Kind,
             kind =>
             {
@@ -812,6 +816,13 @@ public sealed class SettingsPage : ContentPage
         }
         section.Cells.Add(new CommandCell
         {
+            Title = "Notcho Website",
+            ValueText = "shinysoftware.github.io/Notcho",
+            IconSource = Ui.SymbolSource("globe", 16, Ui.Orange),
+            Command = new Command(() => _ = Launcher.OpenAsync("https://shinysoftware.github.io/Notcho/"))
+        });
+        section.Cells.Add(new CommandCell
+        {
             Title = "ShinySoft Technologies",
             ValueText = "shinysoft.biz",
             IconSource = Ui.SymbolSource("sparkles", 16, Ui.Yellow),
@@ -835,17 +846,44 @@ public sealed class SettingsPage : ContentPage
     // Cells
     // ---------------------------------------------------------------------------------------------
 
-    static View Intro(string heading) => new VerticalStackLayout
+    /// <summary>
+    /// The app's icon, for the top of the page: embedded in Core rather than taken from the head, so every
+    /// platform has it (the Mac's app icon is an asset catalog, not an image a view can show).
+    /// </summary>
+    static ImageSource AppIcon() => ImageSource.FromStream(() => typeof(SettingsPage).Assembly.GetManifestResourceStream("Notcho.AppIcon.png")!);
+
+    /// <summary>The icon beside the name and slogan, then a line on getting about, then the first section's heading.</summary>
+    static View Intro(string heading)
     {
-        Spacing = 4,
-        Padding = new Thickness(4, 20, 4, 14),
-        Children =
+        var top = new Grid
         {
-            new Label { Text = "Notcho", FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = Ui.Text },
-            new Label { Text = "Hover the notch to open it, or click it if you'd rather. Drop files on it to keep them in the tray.", FontSize = 12, TextColor = Ui.Secondary },
-            new Label { Text = heading, FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Ui.Secondary, Margin = new Thickness(0, 18, 0, 0) }
-        }
-    };
+            ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star)],
+            ColumnSpacing = 14
+        };
+        top.Children.Add(new Image { Source = AppIcon(), WidthRequest = 76, HeightRequest = 76, VerticalOptions = LayoutOptions.Center }.At(column: 0));
+        top.Children.Add(new VerticalStackLayout
+        {
+            Spacing = 2,
+            VerticalOptions = LayoutOptions.Center,
+            Children =
+            {
+                new Label { Text = "Notcho", FontSize = 28, FontAttributes = FontAttributes.Bold, TextColor = Ui.Text },
+                new Label { Text = "Notcho Notcho Man! We got all the fixins.", FontSize = 13, FontAttributes = FontAttributes.Bold | FontAttributes.Italic, TextColor = Ui.Orange }
+            }
+        }.At(column: 1));
+
+        return new VerticalStackLayout
+        {
+            Spacing = 4,
+            Padding = new Thickness(4, 20, 4, 14),
+            Children =
+            {
+                top,
+                new Label { Text = "Hover the notch to open it, or click it if you'd rather. Drop files on it to keep them in the tray.", FontSize = 12, TextColor = Ui.Secondary, Margin = new Thickness(0, 12, 0, 0) },
+                new Label { Text = heading, FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Ui.Secondary, Margin = new Thickness(0, 18, 0, 0) }
+            }
+        };
+    }
 
     static TableSection Section(string title, string? footer)
     {

@@ -46,6 +46,8 @@ Builds are on the [Releases](https://github.com/ShinySoftware/Notcho/releases) p
 
 `SHA256SUMS.txt` in each release has the checksum of every download. Windows and Linux builds don't update themselves yet: install the new release over the old one.
 
+**Coming from Shiny Notch?** Copies from before the rename (1.3.0 and earlier) update to Notcho on their own, like any other update: each release also carries the Mac zip under the old name, `ShinyNotch-<version>.zip`, which is what their updater looks for. The first time the updated app opens, it renames itself from `ShinyNotch.app` to `Notcho.app` and reopens. Your settings and permissions carry over. A Dock icon pinned to the old name needs pinning again.
+
 <p align="center">
   <img src="docs/screenshots/peek.png" width="388" alt="The collapsed notch: album art and its bars left of the camera, the weather right of it" />
 </p>
@@ -146,10 +148,17 @@ Changes from the keys or Control Centre flash in the notch.
 
 <img src="docs/screenshots/hud.png" width="484" alt="Volume HUD in the notch" />
 
+### Colours and frosted glass
+The closed notch and the open panel each get their own style in Settings: **black** (the default, like the camera it grows out of), **one colour**, a **gradient** from top to bottom, or **frosted glass**. Pick from the swatches (Guacamole, Nacho Cheese, Salsa and friends) or type any hex colour. The notch repaints as you pick.
+
+On a Mac, frosted glass blurs whatever is behind the notch (the menu bar, your wallpaper, the window under the panel) under a light tint you choose. The panel, the closed notch it hangs from and the curves between them blur as one piece. Windows and Linux can't blur what's behind a window, so they don't offer frosted glass.
+
+On a MacBook the camera's own cut-out always stays black, so a colour shows either side of it; a gradient that starts from black at the top blends into it.
+
 ### And
 - **Pin** (⦿) keeps the panel open.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
-- **Settings** (⚙ in the panel) holds the notch size (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
+- **Settings** (⚙ in the panel) holds the notch size, its colours, (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
 - It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Notcho again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
 
 ## Website
@@ -239,12 +248,15 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 - **Keep Awake** takes a power assertion on macOS, `SetThreadExecutionState` on Windows, and a logind sleep inhibitor plus the desktop's idle inhibitor (freedesktop ScreenSaver, or GNOME's session manager) on Linux. Each is released by the system when the app quits, however it quits, so a crash never leaves the computer unable to sleep. A timed session is one timer set for its end, like the countdown.
 - **Now Playing** uses AppleScript, not MediaRemote. Since macOS 15.4 the system-wide now-playing API returns nothing to apps without an Apple entitlement, so only Music and Spotify are seen.
 - **Weather** comes from Open-Meteo, which converts units server-side, so switching °C/°F refetches. Forecasts are cached for 20 minutes per place.
+- **Colours and glass** are painted by each head's own Border handler (`NotchSurfaceHandler`). The AppKit and GTK backends paint a Border's solid colour but leave a gradient clear, so the Mac draws gradients as a `CAGradientLayer` and Linux as a CSS `linear-gradient`. On the Mac, frosted glass is an `NSVisualEffectView` behind the Border's content, blurring behind the window, cut to the notch's shape with a mask image.
+- **Settings shows and hides rows in place.** A switch or choice that brings rows with it (the two width sliders, the hover delay, the colour pickers) changes them without rebuilding the page, so the window doesn't flash or lose its place. Every such row is drawn when the page opens and hidden right after if it isn't wanted, since the AppKit head won't draw a row first shown on a page already on screen.
 - **Text entry** lives in Settings, an ordinary window, and in the quick entry popup for tasks. The notch window is borderless and can never take keyboard focus.
 - **One codebase, three desktops.** `Notcho.Core` holds the views, the controller, Settings and the services; each head (`Notcho` for macOS, `Notcho.Windows`, `Notcho.Linux`) implements a handful of `Platform` interfaces (volume, brightness, system counters, now playing, files, location, icons) and registers them with Shiny's DI source generator. macshot's Capture tab is the one feature only the Mac has.
 
 ## Known limits
 
 - Now Playing only sees Apple Music and Spotify (see above).
+- Frosted glass is macOS only: Windows and Linux can't blur what's behind a window, so Settings doesn't offer it there.
 - Brightness is the built-in display only; most external monitors don't report it.
 - The mirror can only change the camera's own brightness on a USB (UVC) webcam. A MacBook's built-in camera has no setting an app can change, so there the slider brightens the mirror alone.
 - Open at login registers the app wherever it is when you switch it on. Move it to `/Applications` first, or the login item points at the old location.

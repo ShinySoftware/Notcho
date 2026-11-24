@@ -1171,7 +1171,6 @@
     if (!S.opened) {
       S.opened = true;
       notch.classList.remove('attract');
-      $('#hint').classList.add('gone');
     }
   }
   function close() { S.sticky = false; if (S.mode === 'panel') setMode('peek'); }

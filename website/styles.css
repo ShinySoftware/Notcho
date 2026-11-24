@@ -838,7 +838,6 @@ section h2 { letter-spacing: -.005em; }
 
 /* ---------- vegas sign: a vintage marquee arrow pointing up at the notch demo ---------- */
 .vegas { position: absolute; top: calc(var(--mb-h) + 2px); left: calc(50% + 96px); z-index: 2; pointer-events: none; transition: opacity .6s, transform .6s var(--ease); transform-origin: 10% 0; animation: vegas-in 1.2s var(--spring) .6s both; filter: drop-shadow(0 14px 30px rgba(0, 0, 0, .55)); }
-.vegas.gone { opacity: 0; transform: translateY(-30px) scale(.9); }
 .vegas svg { display: block; overflow: visible; }
 .vegas .vs-mob { display: none; }
 @keyframes vegas-in { from { transform: translateY(-40px) rotate(6deg) scale(.85); opacity: 0; } }
