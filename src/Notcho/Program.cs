@@ -22,6 +22,10 @@ public class Program : MacOSMauiApplication
 
     public static void Main(string[] args)
     {
+        // Updated from a copy still named Shiny Notch: renamed to Notcho.app and opened again from there.
+        if (LegacyBundleName.RenameAndRelaunch())
+            return;
+
         NSApplication.Init();
         NSApplication.SharedApplication.Delegate = new Program();
         NSApplication.Main(args);

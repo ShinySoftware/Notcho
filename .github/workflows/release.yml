@@ -5,7 +5,9 @@ name: Release
 # on its own runner; the last job checksums everything and publishes it as one release.
 #
 # The macOS asset's name, Notcho-<version>.zip, is what installed copies look for to update themselves
-# (MacAppUpdater.AssetName): never rename it. Windows and Linux have no updater, so theirs are free.
+# (MacAppUpdater.AssetName): never rename it. The same zip goes up again as ShinyNotch-<version>.zip, the name
+# copies from before the rename (1.3.0 and earlier) look for: same bundle id and signing team, so their updater
+# takes it. Windows and Linux have no updater, so theirs are free.
 on:
   push:
     tags: [ 'v*' ]
@@ -141,11 +143,14 @@ jobs:
           xcrun stapler staple "$APP_PATH"
           spctl --assess --type execute --verbose=2 "$APP_PATH"
 
-      # Exactly this name: installed copies find their update by it (MacAppUpdater.AssetName).
+      # Exactly these names: installed copies find their update by them (MacAppUpdater.AssetName). The second is
+      # for copies still named Shiny Notch (1.3.0 and earlier), whose updater looks for its old name; it installs
+      # the new app over theirs, keeping the bundle's old file name.
       - name: Package
         run: |
           mkdir -p artifacts
           ditto -c -k --keepParent "$APP_PATH" "artifacts/Notcho-$VERSION.zip"
+          cp "artifacts/Notcho-$VERSION.zip" "artifacts/ShinyNotch-$VERSION.zip"
 
       - uses: actions/upload-artifact@v7
         with:
