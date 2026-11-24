@@ -18,12 +18,12 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Two jobs, as GitHub's own Pages starter has them: since the repository was renamed, a freshly uploaded artifact
+# takes GitHub's API a few seconds to list, and a deploy straight after the upload in the same job found nothing.
+# The job boundary gives it that time, and a failed deploy can be re-run on its own without a second upload.
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -33,5 +33,12 @@ jobs:
         with:
           path: website
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
