@@ -806,7 +806,9 @@ public sealed class NotchController
             return peek;
         }
 
-        return new BoxView { Color = Ui.OpenFill.Top, WidthRequest = Math.Max(this.Cutout.Width, 8), HeightRequest = this.PeekHeight };
+        var camera = new Border { StrokeThickness = 0, WidthRequest = Math.Max(this.Cutout.Width, 8), HeightRequest = this.PeekHeight };
+        Ui.Paint(camera, Ui.OpenFill.TopOnly());
+        return camera;
     }
 
     TrayTab BuildTray()

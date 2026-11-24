@@ -18,6 +18,8 @@ public static class MauiProgram
             .UseMauiAppLinuxGtk4<App>()
             .AddLinuxGtk4Essentials()
             .UseNotcho();
+        // Gradient backgrounds for the notch's surfaces.
+        NotchSurfaceHandler.Register(builder);
 
         // Before anything else from Shiny.Audio: PulseAudio/PipeWire capture and playback for voice notes.
         builder.Services.AddLinuxAudio();

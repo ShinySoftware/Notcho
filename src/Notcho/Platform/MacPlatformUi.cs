@@ -13,6 +13,9 @@ namespace Notcho.MacOS;
 [Singleton]
 sealed class MacPlatformUi : IPlatformUi
 {
+    /// <summary>An NSVisualEffectView behind the Border's content: see <see cref="NotchSurfaceHandler"/>.</summary>
+    public bool CanFrost => true;
+
     /// <summary>An SF Symbol drawn into a PNG: no icon assets ship with the app.</summary>
     public ImageSource? Symbol(string name, double size, Color ink, bool multicolor, bool bold)
         => RenderSymbol(name, size, ink, multicolor, bold) is { } png ? ImageSource.FromStream(() => new MemoryStream(png)) : null;

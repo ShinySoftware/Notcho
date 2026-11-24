@@ -162,7 +162,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     public void JoinPanel()
     {
         this.black.StrokeShape = new RoundRectangle { CornerRadius = 0 };
-        this.black.Background = Ui.OpenFill.TopBrush();
+        Ui.Paint(this.black, Ui.OpenFill.TopOnly());
     }
 
     /// <summary>
@@ -191,12 +191,12 @@ sealed class PeekView : Grid, ILiveView, IWinged
         var rightInset = wing - rightWidth;
         black = new Border
         {
-            Background = Ui.ClosedFill.ToBrush(),
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 0, CornerRadius, CornerRadius) },
             Margin = new Thickness(leftInset, 0, rightInset, 0),
             InputTransparent = true
         };
+        Ui.Paint(black, Ui.ClosedFill);
         grid.Children.Add(black.At(columnSpan: 3));
         return new Wings(leftInset, rightInset, wing + middle + wing);
     }

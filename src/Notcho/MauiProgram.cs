@@ -22,6 +22,8 @@ public static class MauiProgram
             .AddMacOSEssentials()
             .UseNotcho()
             .UseNotchMirror();
+        // Gradient and frosted glass backgrounds for the notch's surfaces.
+        NotchSurfaceHandler.Register(builder);
 
         builder.Services.AddCalendarStore();
         builder.Services.AddAudioServices();

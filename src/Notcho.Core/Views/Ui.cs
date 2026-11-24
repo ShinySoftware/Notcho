@@ -21,6 +21,17 @@ static class Ui
     /// <summary>What the open panel is painted with. Kept current from Settings by NotchController.</summary>
     public static Services.NotchFill OpenFill { get; set; } = Services.NotchFill.Black;
 
+    /// <summary>
+    /// Paints a notch surface. Frosted glass is its tint over a blur the head draws natively, behind the
+    /// Border's content and cut to its shape; the mark goes on first, so the head sees it when the
+    /// background lands.
+    /// </summary>
+    public static void Paint(Border surface, Services.NotchFill fill)
+    {
+        Frost.SetFrosted(surface, fill.IsGlass && Platform.CanFrost);
+        surface.Background = fill.ToBrush();
+    }
+
     // Apple's dark-mode system colours, so the notch sits with the rest of macOS.
     public static readonly Color Text = Colors.White;
     public static readonly Color Secondary = Color.FromRgba(235, 235, 245, 153);

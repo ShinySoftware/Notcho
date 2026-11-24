@@ -26,6 +26,7 @@ public sealed class App : Application
         this.updates.Found += (_, release) => this.ShowUpdate(release);
         this.updates.ShowRelease = this.ShowUpdate;
         Views.Ui.Platform = ui;
+        Services.NotchFill.GlassOpacity = ui.CanFrost ? 0.3f : 0.8f;
         this.notch.OpenSettings = this.ShowSettings;
         this.UserAppTheme = AppTheme.Dark;
     }

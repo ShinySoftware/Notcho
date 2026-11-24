@@ -66,8 +66,8 @@ sealed class PanelView : Grid, ILiveView, IDisposable
     readonly Action togglePin;
     readonly Action openSettings;
     // Concave: black in the corner between the neck's side and the panel's top, cut away by a quarter circle.
-    readonly Path leftFlare = Flare($"M {FlareRadius},0 L {FlareRadius},{FlareRadius} L 0,{FlareRadius} A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},0 Z", LayoutOptions.Start);
-    readonly Path rightFlare = Flare($"M 0,0 A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},{FlareRadius} L 0,{FlareRadius} Z", LayoutOptions.End);
+    readonly Border leftFlare = Flare($"M {FlareRadius},0 L {FlareRadius},{FlareRadius} L 0,{FlareRadius} A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},0 Z", LayoutOptions.Start);
+    readonly Border rightFlare = Flare($"M 0,0 A {FlareRadius},{FlareRadius} 0 0 0 {FlareRadius},{FlareRadius} L 0,{FlareRadius} Z", LayoutOptions.End);
     readonly Grid card = new()
     {
         RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)],
@@ -98,12 +98,12 @@ sealed class PanelView : Grid, ILiveView, IDisposable
         // The neck runs straight on into the top edge, so the top corners are the closed notch's.
         this.surface = new Border
         {
-            Background = Ui.OpenFill.ToBrush(),
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(PeekView.CornerRadius, PeekView.CornerRadius, CornerRadius, CornerRadius) },
             HorizontalOptions = LayoutOptions.Center,
             Content = this.card
         };
+        Ui.Paint(this.surface, Ui.OpenFill);
         this.Children.Add(this.surface.At(row: 1));
     }
 
@@ -223,17 +223,22 @@ sealed class PanelView : Grid, ILiveView, IDisposable
         this.rightFlare.Margin = new Thickness(0, 0, side + wings.RightInset - FlareRadius, 0);
     }
 
-    static Path Flare(string data, LayoutOptions side) => new()
+    /// <summary>A Border cut to the curve rather than a Path, so frosted glass can blur behind it like the rest.</summary>
+    static Border Flare(string data, LayoutOptions side)
     {
-        Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString(data)!,
-        Fill = Ui.OpenFill.TopBrush(),
-        StrokeThickness = 0,
-        WidthRequest = FlareRadius,
-        HeightRequest = FlareRadius,
-        HorizontalOptions = side,
-        VerticalOptions = LayoutOptions.End,
-        InputTransparent = true
-    };
+        var flare = new Border
+        {
+            StrokeShape = new Path((Geometry)new PathGeometryConverter().ConvertFromInvariantString(data)!),
+            StrokeThickness = 0,
+            WidthRequest = FlareRadius,
+            HeightRequest = FlareRadius,
+            HorizontalOptions = side,
+            VerticalOptions = LayoutOptions.End,
+            InputTransparent = true
+        };
+        Ui.Paint(flare, Ui.OpenFill.TopOnly());
+        return flare;
+    }
 
     public void Tick()
     {

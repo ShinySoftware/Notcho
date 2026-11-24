@@ -4,6 +4,7 @@ using Notcho.Services;
 using Notcho.Views;
 using ButtonCell = Shiny.Maui.Controls.Cells.ButtonCell;
 using CommandCell = Shiny.Maui.Controls.Cells.CommandCell;
+using CellBase = Shiny.Maui.Controls.Cells.CellBase;
 using CustomCell = Shiny.Maui.Controls.Cells.CustomCell;
 using EntryCell = Shiny.Maui.Controls.Cells.EntryCell;
 using LabelCell = Shiny.Maui.Controls.Cells.LabelCell;
@@ -31,6 +32,8 @@ public sealed class SettingsPage : ContentPage
     // that is already on screen, so a changed list is a fresh page, and the search must survive that.
     static string searchText = "";
     static IReadOnlyList<WeatherPlace> searchResults = [];
+    /// <summary>Where the page being replaced was scrolled to, for the fresh one to carry on from; null once used.</summary>
+    static double? keptScroll;
 
     /// <summary>Saves a script edit still waiting on its debounce.</summary>
     Action? flushScript;
@@ -108,6 +111,12 @@ public sealed class SettingsPage : ContentPage
         {
             ((IView)table).InvalidateMeasure();
             ((IView)this).InvalidateMeasure();
+            // A page built again (see Rebuild) stays where the old one was, once its rows are in.
+            if (keptScroll is { } y && table.Content is ScrollView scroller)
+            {
+                keptScroll = null;
+                this.Dispatcher.Dispatch(() => _ = scroller.ScrollToAsync(0, y, false));
+            }
         });
     }
 
@@ -120,28 +129,35 @@ public sealed class SettingsPage : ContentPage
         var section = Section("Notch", "The size of the closed notch, either side of the camera. Each side still grows to fit what it's showing: what's playing and any system readings on the left; the weather, a countdown or a meeting on the right. At 0 and 0 with nothing to show, it's just the camera. Hovering opens the notch once the pointer has rested on it for as long as you set, so passing over it on the way to the menu bar doesn't.");
 
         var sliders = new List<Slider>();
+        // All three sliders are always there, the ones the lock doesn't want hidden (see Optional).
+        var both = SliderCell("Width each side", "arrow.left.and.right.square", Ui.Teal, settings.NotchLeftWidth, AppSettings.MaxNotchWingWidth, sliders, v =>
+        {
+            settings.NotchLeftWidth = v;
+            settings.NotchRightWidth = v;
+        });
+        var left = SliderCell("Left of camera", "arrow.left.square", Ui.Teal, settings.NotchLeftWidth, AppSettings.MaxNotchWingWidth, sliders, v => settings.NotchLeftWidth = v);
+        var right = SliderCell("Right of camera", "arrow.right.square", Ui.Teal, settings.NotchRightWidth, AppSettings.MaxNotchWingWidth, sliders, v => settings.NotchRightWidth = v);
+        var (bothSlider, leftSlider, rightSlider) = (sliders[0], sliders[1], sliders[2]);
+        var showBoth = Optional(both, settings.NotchWidthsLocked);
+        var showLeft = Optional(left, !settings.NotchWidthsLocked);
+        var showRight = Optional(right, !settings.NotchWidthsLocked);
+
         section.Cells.Add(Switch("Same width both sides", "arrow.left.and.right", Ui.Blue, settings.NotchWidthsLocked, locked =>
         {
             // Locking evens the sides at the left's width; unlocking starts both from where they are.
             if (locked)
                 settings.NotchRightWidth = settings.NotchLeftWidth;
             settings.NotchWidthsLocked = locked;
-            this.Rebuild();
+            bothSlider.Value = settings.NotchLeftWidth;
+            leftSlider.Value = settings.NotchLeftWidth;
+            rightSlider.Value = settings.NotchRightWidth;
+            showBoth(locked);
+            showLeft(!locked);
+            showRight(!locked);
         }));
-
-        if (settings.NotchWidthsLocked)
-        {
-            section.Cells.Add(SliderCell("Width each side", "arrow.left.and.right.square", Ui.Teal, settings.NotchLeftWidth, AppSettings.MaxNotchWingWidth, sliders, v =>
-            {
-                settings.NotchLeftWidth = v;
-                settings.NotchRightWidth = v;
-            }));
-        }
-        else
-        {
-            section.Cells.Add(SliderCell("Left of camera", "arrow.left.square", Ui.Teal, settings.NotchLeftWidth, AppSettings.MaxNotchWingWidth, sliders, v => settings.NotchLeftWidth = v));
-            section.Cells.Add(SliderCell("Right of camera", "arrow.right.square", Ui.Teal, settings.NotchRightWidth, AppSettings.MaxNotchWingWidth, sliders, v => settings.NotchRightWidth = v));
-        }
+        section.Cells.Add(both);
+        section.Cells.Add(left);
+        section.Cells.Add(right);
 
         var heights = new List<Slider>();
         section.Cells.Add(SliderCell("Extra height", "arrow.up.and.down.square", Ui.Indigo, settings.NotchExtraHeight, AppSettings.MaxNotchExtraHeight, heights, v => settings.NotchExtraHeight = v));
@@ -154,14 +170,15 @@ public sealed class SettingsPage : ContentPage
                 slider.Value = 0;
         }));
 
+        // Clicking opens it at once; only hovering waits.
+        var hover = StepperCell("Hover this long to open", "timer", Ui.Orange, settings.HoverOpenDelay, 0, AppSettings.MaxHoverOpenDelay, 50, "ms", v => settings.HoverOpenDelay = v);
+        var showHover = Optional(hover, !settings.ClickToOpen);
         section.Cells.Add(Switch("Click the notch to open it", "cursorarrow.click", Ui.Blue, settings.ClickToOpen, v =>
         {
             settings.ClickToOpen = v;
-            this.Rebuild();
+            showHover(!v);
         }));
-        // Clicking opens it at once; only hovering waits.
-        if (!settings.ClickToOpen)
-            section.Cells.Add(StepperCell("Hover this long to open", "timer", Ui.Orange, settings.HoverOpenDelay, 0, AppSettings.MaxHoverOpenDelay, 50, "ms", v => settings.HoverOpenDelay = v));
+        section.Cells.Add(hover);
         // Buttons on the closed notch only work when hovering doesn't open it first.
         if (settings.ClickToOpen)
         {
@@ -185,8 +202,8 @@ public sealed class SettingsPage : ContentPage
 
     /// <summary>
     /// What the closed notch, or the open panel, is painted with: black (the default), one colour, or a
-    /// gradient from top to bottom. Picking another kind rebuilds the page for its rows; a colour changes in
-    /// place, and the notch repaints as it's picked.
+    /// gradient from top to bottom, or frosted glass. Picking another kind shows its colour rows, in place; a
+    /// colour changes in place too, and the notch repaints as it's picked.
     /// </summary>
     TableSection FillSection(AppSettings settings, bool closed)
     {
@@ -199,34 +216,44 @@ public sealed class SettingsPage : ContentPage
                 settings.OpenNotchFill = fill;
         }
 
+        var glass = Ui.Platform.CanFrost
+            ? " Frosted glass blurs what's behind the notch under a light tint."
+            : " Frosted glass can't blur what's behind the notch here, so it shows as a see-through tint.";
         var section = Section(
             closed ? "Closed Notch Colour" : "Open Notch Colour",
-            closed
+            (closed
                 ? "The closed notch, and the volume and brightness it shows when they change. On a MacBook the camera's own cut-out always stays black, so a colour shows either side of it - a gradient from black at the top blends into it."
-                : "The panel the notch opens into. A gradient runs from the top to the bottom. The notch's text is white, so deeper colours read best."
+                : "The panel the notch opens into. A gradient runs from the top to the bottom. The notch's text is white, so deeper colours read best.") + glass
         );
-        foreach (var (kind, text) in new[] { (NotchFillKind.Black, "Black"), (NotchFillKind.Color, "Colour"), (NotchFillKind.Gradient, "Gradient") })
-            section.Cells.Add(new RadioCell { Title = text, Value = kind.ToString() });
-
         var fill = Current();
-        RadioCell.SetSelectedValue(section, fill.Kind.ToString());
-        section.PropertyChanged += (_, e) =>
+        var (fromCell, showFromColor) = ColorCell("Colour", fill.From, c => Save(Current() with { From = c }));
+        var (toCell, showToColor) = ColorCell("Bottom", fill.To, c => Save(Current() with { To = c }));
+        var showFrom = Optional(fromCell, fill.Kind != NotchFillKind.Black);
+        var showTo = Optional(toCell, fill.Kind == NotchFillKind.Gradient);
+        void ShowRows(NotchFill shown)
         {
-            if (e.PropertyName != RadioCell.SelectedValueProperty.PropertyName)
-                return;
-            if (RadioCell.GetSelectedValue(section) is not string picked || !Enum.TryParse<NotchFillKind>(picked, out var kind))
-                return;
-            var now = Current();
-            if (kind == now.Kind)
-                return;
-            Save(Switched(now, kind));
-            this.Rebuild();
-        };
+            fromCell.Title = shown.Kind switch { NotchFillKind.Gradient => "Top", NotchFillKind.Glass => "Tint", _ => "Colour" };
+            showFromColor(shown.From);
+            showToColor(shown.To);
+            showFrom(shown.Kind != NotchFillKind.Black);
+            showTo(shown.Kind == NotchFillKind.Gradient);
+        }
+        ShowRows(fill);
 
-        if (fill.Kind != NotchFillKind.Black)
-            section.Cells.Add(ColorCell(fill.Kind == NotchFillKind.Gradient ? "Top" : "Colour", fill.From, c => Save(Current() with { From = c })));
-        if (fill.Kind == NotchFillKind.Gradient)
-            section.Cells.Add(ColorCell("Bottom", fill.To, c => Save(Current() with { To = c })));
+        section.Cells.Add(ChoiceCell("Style", "paintbrush.fill", Ui.Pink,
+            [(NotchFillKind.Black, "Black"), (NotchFillKind.Color, "Colour"), (NotchFillKind.Gradient, "Gradient"), (NotchFillKind.Glass, "Frosted Glass")],
+            fill.Kind,
+            kind =>
+            {
+                var now = Current();
+                if (kind == now.Kind)
+                    return;
+                var switched = Switched(now, kind);
+                Save(switched);
+                ShowRows(switched);
+            }));
+        section.Cells.Add(fromCell);
+        section.Cells.Add(toCell);
         return section;
     }
 
@@ -239,6 +266,11 @@ public sealed class SettingsPage : ContentPage
     static NotchFill Switched(NotchFill from, NotchFillKind kind) => (from.Kind, kind) switch
     {
         (_, NotchFillKind.Black) => NotchFill.Black,
+        // Glass starts as a dark tint, the closest to the black notch it replaces; from a colour it keeps it.
+        (NotchFillKind.Black, NotchFillKind.Glass) => new NotchFill(kind, Colors.Black, Colors.Black),
+        (_, NotchFillKind.Glass) => new NotchFill(kind, from.Kind == NotchFillKind.Gradient ? from.To : from.From, from.To),
+        (NotchFillKind.Glass, NotchFillKind.Color) when from.From == Colors.Black => new NotchFill(kind, FirstColor, FirstColor),
+        (NotchFillKind.Glass, NotchFillKind.Color) => new NotchFill(kind, from.From, from.From),
         (NotchFillKind.Black, NotchFillKind.Color) => new NotchFill(kind, FirstColor, FirstColor),
         (NotchFillKind.Black, NotchFillKind.Gradient) => new NotchFill(kind, Colors.Black, FirstColor),
         // A gradient that starts from black keeps its other colour.
@@ -248,9 +280,9 @@ public sealed class SettingsPage : ContentPage
 
     /// <summary>
     /// The swatches, and the colour as hex for any other: typing a valid one picks it. The ring marks the
-    /// swatch matching the colour, when one does.
+    /// swatch matching the colour, when one does. Also returns a way to show another colour without picking it.
     /// </summary>
-    static CustomCell ColorCell(string title, Color value, Action<Color> changed)
+    static (CustomCell Cell, Action<Color> Show) ColorCell(string title, Color value, Action<Color> changed)
     {
         const double Size = 20;
         var swatches = new List<(Color Color, Border View)>();
@@ -308,6 +340,62 @@ public sealed class SettingsPage : ContentPage
             CustomContent = new HorizontalStackLayout { Spacing = 12, HorizontalOptions = LayoutOptions.End, Children = { grid, hex } }
         };
         // As for switches (see NewSwitchCell): the row's own tap recognizer would take the swatches' clicks.
+        cell.GestureRecognizers.Clear();
+        return (cell, shown =>
+        {
+            hex.Text = shown.ToArgbHex();
+            Mark(shown);
+        });
+    }
+
+    /// <summary>
+    /// One of a few choices, as a row of pills. Not RadioCells: a picked RadioCell also sets its value on the
+    /// whole table, which unticks the radios of every other group - two radio sections on one page undo
+    /// each other (and with the same values, picking one picked the other too).
+    /// </summary>
+    static CustomCell ChoiceCell<T>(string title, string symbol, Color tint, IReadOnlyList<(T Value, string Text)> choices, T value, Action<T> picked)
+    {
+        var pills = new List<(T Value, Border View, Label Text)>();
+        void Mark(T chosen) => pills.ForEach(p =>
+        {
+            var on = EqualityComparer<T>.Default.Equals(p.Value, chosen);
+            p.View.BackgroundColor = on ? Ui.Blue : Ui.Separator;
+            p.Text.TextColor = on ? Ui.Text : Ui.Secondary;
+        });
+
+        var row = new HorizontalStackLayout { Spacing = 6, HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Center };
+        foreach (var (choice, text) in choices)
+        {
+            var label = new Label { Text = text, FontSize = 12, FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center };
+            var pill = new Border
+            {
+                Padding = new Thickness(10, 4),
+                StrokeThickness = 0,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
+                Content = label,
+                AutomationId = text
+            };
+            pill.GestureRecognizers.Add(new TapGestureRecognizer
+            {
+                Command = new Command(() =>
+                {
+                    Mark(choice);
+                    picked(choice);
+                })
+            });
+            pills.Add((choice, pill, label));
+            row.Children.Add(pill);
+        }
+        Mark(value);
+
+        var cell = new CustomCell
+        {
+            Title = title,
+            IconSource = Ui.SymbolSource(symbol, 16, tint),
+            IsSelectable = false,
+            CustomContent = row
+        };
+        // As for switches (see NewSwitchCell): the row's own tap recognizer would take the pills' clicks.
         cell.GestureRecognizers.Clear();
         return cell;
     }
@@ -454,24 +542,26 @@ public sealed class SettingsPage : ContentPage
     {
         var section = Section("Weather", null);
 
-        var here = Switch("Show the weather where I am", "location.fill", Ui.Blue, settings.WeatherUseCurrentLocation, v =>
+        var allow = Button("Allow location access", weather.RequestLocationAccess);
+        var showAllow = Optional(allow, false);
+        SwitchCell? here = null;
+        // The location access note and button that go with the switch.
+        void ShowAccess(bool on)
+        {
+            here!.Description = on && weather.IsLocationDenied ? "Location access is off: allow it in your system's privacy settings." : "";
+            showAllow(on && !weather.IsLocationDenied && !weather.IsLocationAuthorized);
+        }
+        here = Switch("Show the weather where I am", "location.fill", Ui.Blue, settings.WeatherUseCurrentLocation, v =>
         {
             settings.WeatherUseCurrentLocation = v;
             if (v)
                 weather.RequestLocationAccess();
             _ = weather.RefreshAsync(force: true);
-            // Shows or hides the location access note and button that go with the switch.
-            this.Rebuild();
+            ShowAccess(v);
         });
+        ShowAccess(settings.WeatherUseCurrentLocation);
         section.Cells.Add(here);
-
-        if (settings.WeatherUseCurrentLocation)
-        {
-            if (weather.IsLocationDenied)
-                here.Description = "Location access is off: allow it in your system's privacy settings.";
-            else if (!weather.IsLocationAuthorized)
-                section.Cells.Add(Button("Allow location access", weather.RequestLocationAccess));
-        }
+        section.Cells.Add(allow);
         return section;
     }
 
@@ -788,6 +878,31 @@ public sealed class SettingsPage : ContentPage
         return cell;
     }
 
+    /// <summary>
+    /// A row that comes and goes, shown and hidden in place with the returned action - not by building the
+    /// page again, which flashed the whole window and lost its scroll position. The AppKit head never
+    /// realises a row first shown on a page that's already on screen, so every such row is drawn, and only
+    /// then hidden if it isn't wanted; a row the table has drawn hides and shows itself.
+    /// </summary>
+    static Action<bool> Optional(CellBase cell, bool visible)
+    {
+        var wanted = visible;
+        var drawn = false;
+        cell.HandlerChanged += (_, _) =>
+        {
+            if (drawn || cell.Handler == null)
+                return;
+            drawn = true;
+            cell.Dispatcher.Dispatch(() => cell.IsVisible = wanted);
+        };
+        return show =>
+        {
+            wanted = show;
+            if (drawn)
+                cell.IsVisible = show;
+        };
+    }
+
     static ButtonCell Button(string title, Action tapped)
         => new() { Title = title, ButtonTextColor = Ui.Blue, Command = new Command(tapped) };
 
@@ -841,6 +956,8 @@ public sealed class SettingsPage : ContentPage
     {
         // The fresh page reads the script from settings, so an edit still in its debounce goes there first.
         this.flushScript?.Invoke();
+        if (this.Content is TableView { Content: ScrollView scroller })
+            keptScroll = scroller.ScrollY;
         if (this.Window is { } window && IPlatformApplication.Current?.Services.GetService<SettingsPage>() is { } fresh)
             window.Page = fresh;
     }

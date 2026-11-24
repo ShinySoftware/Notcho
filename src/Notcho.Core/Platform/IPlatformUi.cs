@@ -14,6 +14,12 @@ public interface IPlatformUi
     /// <param name="multicolor">The symbol's own colours (weather), rather than <paramref name="ink"/>.</param>
     ImageSource? Symbol(string name, double size, Color ink, bool multicolor, bool bold);
 
+    /// <summary>
+    /// Whether a Border marked with <see cref="Views.Frost"/> is backed by a real blur of what's behind the
+    /// window. Without one, frosted glass is just its tint.
+    /// </summary>
+    bool CanFrost => false;
+
     /// <summary>The width, in points, of <paramref name="text"/> in the system font as the platform draws it.</summary>
     double TextWidth(string text, double fontSize, bool bold);
 

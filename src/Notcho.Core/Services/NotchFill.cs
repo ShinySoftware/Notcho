@@ -6,7 +6,13 @@ public enum NotchFillKind
     Black,
     Color,
     /// <summary>From one colour at the top to another at the bottom.</summary>
-    Gradient
+    Gradient,
+    /// <summary>
+    /// Frosted glass: what's behind the notch, blurred, under a see-through tint of <see cref="NotchFill.From"/>.
+    /// Only a head that can blur behind its window (<see cref="Platform.IPlatformUi.CanFrost"/>) blurs; the
+    /// others show the tint, more solid so the text over it stays readable.
+    /// </summary>
+    Glass
 }
 
 /// <summary>
@@ -36,8 +42,21 @@ public sealed record NotchFill(NotchFillKind Kind, Color From, Color To)
         ("Refried Bean", Color.FromArgb("#4A2412"))
     ];
 
+    /// <summary>
+    /// How much of the glass's tint shows: set at startup from whether the head really blurs. A blur hides
+    /// enough of what's behind it to keep a light tint readable; without one, the tint has to do it alone.
+    /// </summary>
+    public static float GlassOpacity { get; set; } = 0.8f;
+
+    public bool IsGlass => this.Kind == NotchFillKind.Glass;
+
     /// <summary>The colour along the top edge, where the notch meets the menu bar.</summary>
-    public Color Top => this.Kind == NotchFillKind.Black ? Colors.Black : this.From;
+    public Color Top => this.Kind switch
+    {
+        NotchFillKind.Black => Colors.Black,
+        NotchFillKind.Glass => this.From.WithAlpha(GlassOpacity),
+        _ => this.From
+    };
 
     public Color Bottom => this.Kind == NotchFillKind.Gradient ? this.To : this.Top;
 
@@ -46,7 +65,7 @@ public sealed record NotchFill(NotchFillKind Kind, Color From, Color To)
     {
         var t = (float)Math.Clamp(fraction, 0, 1);
         var (a, b) = (this.Top, this.Bottom);
-        return new Color(a.Red + (b.Red - a.Red) * t, a.Green + (b.Green - a.Green) * t, a.Blue + (b.Blue - a.Blue) * t);
+        return new Color(a.Red + (b.Red - a.Red) * t, a.Green + (b.Green - a.Green) * t, a.Blue + (b.Blue - a.Blue) * t, a.Alpha + (b.Alpha - a.Alpha) * t);
     }
 
     public Brush ToBrush() => this.Kind == NotchFillKind.Gradient
@@ -54,7 +73,7 @@ public sealed record NotchFill(NotchFillKind Kind, Color From, Color To)
         : new SolidColorBrush(this.Top);
 
     /// <summary>The same fill with its own top edge only: for a piece that sits wholly in the top band.</summary>
-    public Brush TopBrush() => new SolidColorBrush(this.Top);
+    public NotchFill TopOnly() => this.Kind == NotchFillKind.Gradient ? new NotchFill(NotchFillKind.Color, this.From, this.From) : this;
 
     public string Serialize() => $"{this.Kind}|{this.From.ToArgbHex()}|{this.To.ToArgbHex()}";
 
