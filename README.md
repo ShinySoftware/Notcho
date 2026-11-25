@@ -204,13 +204,16 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 | [Microsoft.Maui.Controls](https://www.nuget.org/packages/Microsoft.Maui.Controls) | 11.0.10 | The UI framework |
 | [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | .NET MAUI on native AppKit (`net11.0-macos`), not Mac Catalyst |
 | [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | MAUI Essentials for the AppKit head |
-| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 7.0.1 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
-| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 7.0.1 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
-| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 3.0.0-beta.3 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
-| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 3.0.0-beta.3 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
-| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 3.0.0-beta.3 | `CameraView` for the mirror: preview, looks, camera choice and photos |
-| [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 3.0.0-beta.3 | The mirror's QR reader: spots a web link in view and offers to open it |
+| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 7.1.0 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
+| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 7.1.0 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
+| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 3.0.0 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
+| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 3.0.0 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
+| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 3.0.0 | `CameraView` for the mirror: preview, looks, camera choice and photos |
+| [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 3.0.0 | The mirror's QR reader: spots a web link in view and offers to open it |
 | [Shiny.Audio](https://www.nuget.org/packages/Shiny.Audio) | 3.0.0 | Voice notes: recording from a chosen microphone, and playback |
+| [Shiny.Gps](https://www.nuget.org/packages/Shiny.Gps) | 7.1.0 | The weather's "where I am": `IGpsManager` for the fix (CoreLocation on macOS) and `IGeocoder` to name it (MapKit on macOS 26+, OpenStreetMap Nominatim on Windows and Linux) |
+| [Shiny.Gps.Linux](https://www.nuget.org/packages/Shiny.Gps.Linux) | 7.1.0 | The GTK head's `IGpsManager`, over GeoClue |
+| [Shiny.Hosting.Maui](https://www.nuget.org/packages/Shiny.Hosting.Maui) | 7.1.0 | `UseShiny()`: Shiny's host, stores and startup tasks |
 | [Shiny.Extensions.Stores](https://www.nuget.org/packages/Shiny.Extensions.Stores) | 6.0.2 | Settings, on NSUserDefaults (a settings file on other platforms) |
 | [Shiny.Extensions.DependencyInjection](https://www.nuget.org/packages/Shiny.Extensions.DependencyInjection) | 6.0.2 | `[Singleton]`-attributed services, registered by a source generator |
 | [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.14 | Debug builds only: UI inspection and automation |
@@ -225,8 +228,8 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 | DisplayServices (private) | Built-in display brightness; there is no public API on Apple silicon |
 | IOKit, mach `host_statistics`, `sysctl`, `getifaddrs` | GPU utilisation, disk bytes, CPU and memory, network bytes |
 | EventKit | Calendar events |
-| CoreLocation (`CLLocationManager`, `CLGeocoder`) | Where you are for the weather, and its name |
 | [Open-Meteo](https://open-meteo.com) | Forecasts and city search: free, no API key |
+| [OpenStreetMap Nominatim](https://nominatim.org) | The name of where you are on Windows and Linux, through Shiny.Gps's geocoder. © OpenStreetMap contributors |
 
 ## Permissions
 

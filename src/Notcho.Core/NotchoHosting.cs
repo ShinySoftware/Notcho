@@ -49,7 +49,12 @@ public static class NotchoHosting
             o.DisplayName = "Notcho";
         });
 
-        builder.Services.AddShinyStores();
+        // Shiny's host: IPlatform, the key/value stores and the startup tasks (the GPS listener's restart among
+        // them), which Shiny.Gps needs.
+        builder.UseShiny();
+        // The weather's "where I am": a fix from Shiny.Gps (where it has GPS for the platform), named by its geocoder.
+        builder.Services.AddGps();
+        builder.Services.AddGeocoding();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IDispatcherProvider>().GetForCurrentThread()!);
         // Everything marked [Singleton] / [Transient] in Core.

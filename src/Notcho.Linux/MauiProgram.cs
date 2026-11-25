@@ -21,6 +21,10 @@ public static class MauiProgram
         // Gradient backgrounds for the notch's surfaces.
         NotchSurfaceHandler.Register(builder);
 
+        // GeoClue for the weather's "where I am": after UseNotcho's AddGps, which has no GPS for plain net11.0.
+        // The desktop id is what the location agent shows and remembers its answer by: the app's .desktop name.
+        builder.Services.AddLinuxGps(o => o.DesktopId = "net.shiny.notcho");
+
         // Before anything else from Shiny.Audio: PulseAudio/PipeWire capture and playback for voice notes.
         builder.Services.AddLinuxAudio();
         // No speech-to-text: Linux has no OS recognizer, so the teleprompter doesn't offer to follow a voice.

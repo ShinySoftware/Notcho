@@ -544,7 +544,9 @@ public sealed class SettingsPage : ContentPage
 
     TableSection WeatherSection(AppSettings settings, WeatherService weather)
     {
-        var section = Section("Weather", null);
+        // On Windows and Linux your location's name comes from OpenStreetMap, whose terms ask for this wherever
+        // it's shown. The Mac names it with Apple's geocoder.
+        var section = Section("Weather", OperatingSystem.IsMacOS() ? null : $"Place names for your location: {Shiny.Locations.NominatimOptions.Attribution}");
 
         var allow = Button("Allow location access", weather.RequestLocationAccess);
         var showAllow = Optional(allow, false);

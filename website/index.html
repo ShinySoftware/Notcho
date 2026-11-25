@@ -195,7 +195,7 @@
             </div>
           </div>
           <h3>Weather</h3>
-          <p>Like the iOS widget: now, the next twelve hours and the week. Add cities in Settings and switch with ‹ ›. Tap the temperature to flip °C and °F.</p>
+          <p>Like the iOS widget: now, the next twelve hours and the week, for where you are and any city you add in Settings. Switch with ‹ ›. Tap the temperature to flip °C and °F.</p>
           <button class="try" type="button" data-open-tab="weather">Check the forecast <span>↑</span></button>
         </article>
 
@@ -350,7 +350,7 @@
         </div>
         <div class="tl-legend"><span><i class="lg-poll"></i>Wakes up to check</span><span><i class="lg-ev"></i>Wakes up because something changed</span></div>
         <ul class="tl-facts">
-          <li><b>Native AppKit.</b> .NET MAUI on the AppKit head, not Mac Catalyst.</li>
+          <li><b>Native AppKit.</b> .NET 11 and .NET MAUI on the AppKit head, not Mac Catalyst.</li>
           <li><b>No icon assets.</b> SF Symbols are drawn once and cached.</li>
           <li><b>No keyboard grabs.</b> The notch window can never take focus; typing happens in a quick entry popup.</li>
           <li><b>No Dock icon.</b> It's an agent app. Open it again from Finder to get to Settings.</li>
@@ -403,7 +403,7 @@
       <div class="reveal">
         <p class="eyebrow">The secret sauce</p>
         <h2>The notch is a control.<br><em>The recipe's open.</em></h2>
-        <p class="lede">The sauce isn't that secret. Notcho is a showcase for Shiny .NET, the MIT-licensed libraries for .NET MAUI, Blazor and ASP.NET Core. The morphing notch, the music bars, open at login and the calendar all come from packages anyone can use.</p>
+        <p class="lede">The sauce isn't that secret. Notcho is a showcase for Shiny .NET, the MIT-licensed libraries for .NET MAUI, Blazor and ASP.NET Core. The morphing notch, the music bars, open at login, the calendar and the weather where you are all come from packages anyone can use.</p>
         <a class="btn btn-ghost" href="https://www.shinylib.net" target="_blank" rel="noopener">Explore shinylib.net</a>
       </div>
       <div class="libs reveal">
@@ -423,6 +423,7 @@
           <li><b>Shiny.Maui.Controls.Desktop</b><span>The notch window, hover tracking, the cut-out size and file drop</span></li>
           <li><b>Shiny.Core</b><span>Hosting, DI, permissions and open at login</span></li>
           <li><b>Shiny.Calendar</b><span>Every calendar you have, for the tab and the meeting peek</span></li>
+          <li><b>Shiny.Gps</b><span>Where you are and what it's called, for the weather: CoreLocation on the Mac, Windows location services, GeoClue on Linux</span></li>
         </ul>
       </div>
     </div>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Shiny;
+using Shiny.Locations;
 using Notcho.Platform;
 
 namespace Notcho.Services;
@@ -30,36 +31,38 @@ public sealed record WeatherReport(
 /// Forecasts for where you are and any places you add, from Open-Meteo (free, no API key).
 /// </summary>
 /// <remarks>
-/// "Where you are" comes from CoreLocation, asked once per refresh and named with the system's reverse
-/// geocoder. Temperatures follow the region's units: Fahrenheit where the region isn't metric.
+/// "Where you are" comes from Shiny.Gps: a fix once per refresh, named with its reverse geocoder.
+/// Temperatures follow the region's units: Fahrenheit where the region isn't metric.
 /// </remarks>
 [Singleton]
 public sealed class WeatherService
 {
     static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(20);
+    static readonly TimeSpan FixTimeout = TimeSpan.FromSeconds(10);
 
     readonly AppSettings settings;
     readonly TimeProvider time;
     readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(15) };
     readonly Dictionary<string, WeatherReport> reports = new();
-    readonly ILocationProvider location;
+    readonly IGeocoder geocoder;
+    readonly IGpsManager? gps;
     WeatherPlace? current;
     bool refreshing;
     bool refreshQueued;
     bool queuedForce;
     int unitVersion;
 
-    public WeatherService(AppSettings settings, TimeProvider time, ILocationProvider location)
+    /// <param name="gps">Null where Shiny.Gps has no GPS for the platform: only places added by hand then.</param>
+    public WeatherService(AppSettings settings, TimeProvider time, IGeocoder geocoder, IGpsManager? gps = null)
     {
         this.settings = settings;
         this.time = time;
-        this.location = location;
-        this.location.AccessChanged += (_, _) =>
-        {
-            if (this.IsLocationAuthorized && this.settings.WeatherUseCurrentLocation)
-                _ = this.RefreshAsync(force: true);
-        };
+        this.geocoder = geocoder;
+        this.gps = gps;
     }
+
+    /// <summary>Read fresh each time, so a change made in system settings shows on the next look.</summary>
+    AccessState LocationStatus => this.gps?.GetCurrentStatus(GpsRequest.Foreground) ?? AccessState.NotSupported;
 
     /// <summary>Fahrenheit when chosen in Settings, or on Automatic where the region isn't metric.</summary>
     public bool UsesFahrenheit => this.settings.TemperatureUnit switch
@@ -85,12 +88,13 @@ public sealed class WeatherService
     /// <summary>Flips between °C and °F (from whichever is showing now).</summary>
     public void ToggleUnit() => this.SetUnit(this.UsesFahrenheit ? "c" : "f");
 
-    public bool IsLocationAuthorized => this.location.Access == LocationAccess.Granted;
+    /// <summary>Restricted is reduced accuracy: still good to the city, which is all the weather needs.</summary>
+    public bool IsLocationAuthorized => this.LocationStatus is AccessState.Available or AccessState.Restricted;
 
-    public bool IsLocationDenied => this.location.Access == LocationAccess.Denied;
+    public bool IsLocationDenied => this.LocationStatus is AccessState.Denied or AccessState.Disabled;
 
     /// <summary>The platform can't locate at all: no "where I am", only places added by hand.</summary>
-    public bool IsLocationUnavailable => this.location.Access == LocationAccess.Unavailable;
+    public bool IsLocationUnavailable => this.LocationStatus == AccessState.NotSupported;
 
     /// <summary>Where you are (when allowed and turned on), then the places you added.</summary>
     public IReadOnlyList<WeatherPlace> Places
@@ -135,7 +139,27 @@ public sealed class WeatherService
             _ = this.RefreshAsync(force: true);
     }
 
-    public void RequestLocationAccess() => this.location.RequestAccess();
+    public void RequestLocationAccess() => _ = this.RequestLocationAccessAsync();
+
+    /// <summary>Asks, then shows the answer: a refresh with where you are when it's yes.</summary>
+    async Task RequestLocationAccessAsync()
+    {
+        if (this.gps == null)
+            return;
+
+        try
+        {
+            await this.gps.RequestAccess(GpsRequest.Foreground).ConfigureAwait(true);
+        }
+        catch
+        {
+            // No location platform at all (a locked-down machine): the status says so from now on.
+        }
+
+        this.Changed?.Invoke(this, EventArgs.Empty);
+        if (this.IsLocationAuthorized && this.settings.WeatherUseCurrentLocation)
+            await this.RefreshAsync(force: true).ConfigureAwait(true);
+    }
 
     public void Add(WeatherPlace place)
     {
@@ -224,8 +248,8 @@ public sealed class WeatherService
     {
         if (this.settings.WeatherUseCurrentLocation)
         {
-            // First run: ask. The answer arrives through AuthorizationChanged, which refreshes again.
-            if (this.location.Access == LocationAccess.NotDetermined)
+            // First run: ask. Once answered, a yes refreshes again.
+            if (this.LocationStatus == AccessState.Unknown)
                 this.RequestLocationAccess();
             else if (this.IsLocationAuthorized)
                 await this.UpdateCurrentPlaceAsync().ConfigureAwait(true);
@@ -251,12 +275,48 @@ public sealed class WeatherService
 
     async Task UpdateCurrentPlaceAsync()
     {
-        if (await this.location.GetCurrentAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true) is not { } fix)
+        if (await this.GetFixAsync().ConfigureAwait(true) is not { } fix)
             return;
 
-        // A fix the platform couldn't name keeps the last name.
-        var name = fix.Name ?? this.current?.Name ?? "My Location";
+        // A fix that couldn't be named keeps the last name.
+        var name = await this.NameAsync(fix).ConfigureAwait(true) ?? this.current?.Name ?? "My Location";
         this.current = new WeatherPlace(name, fix.Latitude, fix.Longitude, IsCurrent: true);
+    }
+
+    /// <summary>One reading, or null on a timeout or failure.</summary>
+    async Task<Position?> GetFixAsync()
+    {
+        if (this.gps == null)
+            return null;
+
+        using var timeout = new CancellationTokenSource(FixTimeout);
+        try
+        {
+            var reading = await this.gps.GetCurrentPosition(timeout.Token).ConfigureAwait(true);
+            return reading?.Position;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The city (or the nearest thing to one) at <paramref name="fix"/>, or null if it can't be named.</summary>
+    async Task<string?> NameAsync(Position fix)
+    {
+        if (!this.geocoder.IsSupported)
+            return null;
+
+        try
+        {
+            var marks = await this.geocoder.ReverseGeocode(fix).ConfigureAwait(true);
+            return marks.Select(m => m.Locality ?? m.SubAdministrativeArea ?? m.AdministrativeArea).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+        }
+        catch
+        {
+            // Offline, or the geocoder had nothing.
+            return null;
+        }
     }
 
     async Task<WeatherReport?> FetchAsync(WeatherPlace place)

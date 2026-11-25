@@ -43,6 +43,9 @@
         <PackageReference Include="Shiny.Calendar" />
         <PackageReference Include="Shiny.Core" />
         <PackageReference Include="Shiny.Extensions.Stores" />
+        <PackageReference Include="Shiny.Gps" />
+        <PackageReference Include="Shiny.Gps.Linux" />
+        <PackageReference Include="Shiny.Hosting.Maui" />
         <PackageReference Include="Shiny.Maui.Controls" />
         <PackageReference Include="Shiny.Maui.Controls.Desktop" />
     </ItemGroup>
