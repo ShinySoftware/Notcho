@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ShinyDIExtensionMethodName>AddPlatformServices</ShinyDIExtensionMethodName>
         <ShinyDIExtensionNamespace>Notcho.MacOS</ShinyDIExtensionNamespace>
-        <TargetFramework>net10.0-macos</TargetFramework>
+        <TargetFramework>net11.0-macos</TargetFramework>
         <OutputType>Exe</OutputType>
         <UseMaui>true</UseMaui>
         <SingleProject>true</SingleProject>
@@ -56,7 +56,7 @@
         <ProjectReference Include="../Notcho.Core/Notcho.Core.csproj" />
     </ItemGroup>
 
-    <!-- Referenced here too, not only through Core: Core is net10.0, so these resolve their macOS
+    <!-- Referenced here too, not only through Core: Core is net11.0, so these resolve their macOS
          assets only when this head asks for them. -->
     <ItemGroup>
         <PackageReference Include="Shiny.Audio" />

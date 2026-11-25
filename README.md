@@ -175,20 +175,20 @@ The screenshots in its gallery are copies of the ones in `docs/screenshots`, in 
 
 ```bash
 dotnet build
-open src/Notcho/bin/Debug/net10.0-macos/osx-arm64/Notcho.app
+open src/Notcho/bin/Debug/net11.0-macos/osx-arm64/Notcho.app
 ```
 
 For a release build:
 
 ```bash
 dotnet build -c Release
-open src/Notcho/bin/Release/net10.0-macos/osx-arm64/Notcho.app
+open src/Notcho/bin/Release/net11.0-macos/osx-arm64/Notcho.app
 ```
 
 Debug builds accept `--open <Media|Weather|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Awake|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
 
 ```bash
-src/Notcho/bin/Debug/net10.0-macos/osx-arm64/Notcho.app/Contents/MacOS/Notcho --open Weather
+src/Notcho/bin/Debug/net11.0-macos/osx-arm64/Notcho.app/Contents/MacOS/Notcho --open Weather
 ```
 
 The icon's source is `src/Notcho/Resources/AppIcon/appicon.svg`. After editing it, re-render the PNG the build uses:
@@ -201,19 +201,19 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 
 | Package | Version | Used for |
 |---|---|---|
-| [Microsoft.Maui.Controls](https://www.nuget.org/packages/Microsoft.Maui.Controls) | 10.0.100 | The UI framework |
-| [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | .NET MAUI on native AppKit (`net10.0-macos`), not Mac Catalyst |
-| [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | MAUI Essentials for the AppKit head |
-| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 6.6.0 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
-| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 6.6.0 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
-| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 2.5.0 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
-| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 2.5.0 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
-| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 2.5.0 | `CameraView` for the mirror: preview, looks, camera choice and photos |
-| [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 2.5.0 | The mirror's QR reader: spots a web link in view and offers to open it |
+| [Microsoft.Maui.Controls](https://www.nuget.org/packages/Microsoft.Maui.Controls) | 11.0.10 | The UI framework |
+| [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | .NET MAUI on native AppKit (`net11.0-macos`), not Mac Catalyst |
+| [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | MAUI Essentials for the AppKit head |
+| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 7.0.1 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
+| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 7.0.1 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
+| [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 3.0.0-beta.3 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
+| [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 3.0.0-beta.3 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
+| [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 3.0.0-beta.3 | `CameraView` for the mirror: preview, looks, camera choice and photos |
+| [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 3.0.0-beta.3 | The mirror's QR reader: spots a web link in view and offers to open it |
 | [Shiny.Audio](https://www.nuget.org/packages/Shiny.Audio) | 3.0.0 | Voice notes: recording from a chosen microphone, and playback |
 | [Shiny.Extensions.Stores](https://www.nuget.org/packages/Shiny.Extensions.Stores) | 6.0.2 | Settings, on NSUserDefaults (a settings file on other platforms) |
 | [Shiny.Extensions.DependencyInjection](https://www.nuget.org/packages/Shiny.Extensions.DependencyInjection) | 6.0.2 | `[Singleton]`-attributed services, registered by a source generator |
-| [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.13 | Debug builds only: UI inspection and automation |
+| [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.14 | Debug builds only: UI inspection and automation |
 
 | Apple framework / service | Used for |
 |---|---|

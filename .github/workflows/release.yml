@@ -21,14 +21,14 @@ permissions:
   contents: write
 
 env:
-  # The workload set whose macos SDK (27.2.10000) builds with Xcode 27.2. Pinned: setup-dotnet alone takes the
+  # The workload set whose macos SDK (27.2.11039) builds with Xcode 27.2. Pinned: setup-dotnet alone takes the
   # newest, and a new one can need a different Xcode overnight. Windows installs maui-windows from the same set.
-  WORKLOAD_VERSION: 10.0.404
-  DOTNET_VERSION: 10.0.4xx
+  WORKLOAD_VERSION: 11.0.100.1
+  DOTNET_VERSION: 11.0.1xx
   WINDOWS_PROJECT: src/Notcho.Windows/Notcho.Windows.csproj
   LINUX_PROJECT: src/Notcho.Linux/Notcho.Linux.csproj
   NFPM_VERSION: 2.48.0
-  APP_PATH: src/Notcho/bin/Release/net10.0-macos/osx-arm64/Notcho.app
+  APP_PATH: src/Notcho/bin/Release/net11.0-macos/osx-arm64/Notcho.app
 
 jobs:
   version:
@@ -187,7 +187,7 @@ jobs:
       - name: Build
         run: |
           foreach ($arch in 'x64', 'arm64') {
-            dotnet publish "$env:WINDOWS_PROJECT" -c Release -f net10.0-windows10.0.19041.0 -r "win-$arch" `
+            dotnet publish "$env:WINDOWS_PROJECT" -c Release -f net11.0-windows10.0.19041.0 -r "win-$arch" `
               --self-contained `
               -p:WindowsAppSDKSelfContained=true `
               -p:Version="$env:APP_VERSION" `
@@ -231,7 +231,7 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # No workload: the Linux head and Core are plain net10.0 projects on NuGet packages, as maui-labs' template
+      # No workload: the Linux head and Core are plain net11.0 projects on NuGet packages, as maui-labs' template
       # is (which is why Core doesn't set UseMaui). Both architectures from one runner - the app is managed code
       # over GTK, which it loads from the system at run time, so an arm64 publish only needs the arm64 runtime pack.
       - name: Build
