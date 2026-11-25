@@ -71,9 +71,19 @@ public sealed class SystemStatsService
         this.lastSample = this.time.GetUtcNow();
     }
 
+    /// <summary>
+    /// A second reading within this long of the last returns that one. With the panel open, the peek above it
+    /// and the Stats tab both tick on the same second; the second sample would see a few milliseconds of
+    /// counters, which for disk and network is nothing, and show zero.
+    /// </summary>
+    static readonly TimeSpan ShareWindow = TimeSpan.FromMilliseconds(500);
+
     public SystemStats Sample()
     {
         var now = this.time.GetUtcNow();
+        if (this.Current is { } shared && now - this.lastSample < ShareWindow)
+            return shared;
+
         var seconds = Math.Max(0.2, (now - this.lastSample).TotalSeconds);
 
         var cpu = this.counters.CpuTicks();
