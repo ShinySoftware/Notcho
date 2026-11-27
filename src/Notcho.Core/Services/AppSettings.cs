@@ -129,22 +129,59 @@ public sealed class AppSettings
         set => this.Set(nameof(this.NotchExtraHeight), Math.Clamp(Math.Round(value), 0, MaxNotchExtraHeight));
     }
 
-    public const double MaxStandInCameraWidth = 240;
+    /// <summary>
+    /// The displays the notch is on, by <c>NotchDisplay.Id</c>. Empty, or none of them connected, is the
+    /// primary display alone. Displays picked but unplugged stay listed, so plugging one back in brings
+    /// its notch back.
+    /// </summary>
+    public IReadOnlyList<string> NotchDisplays
+    {
+        get => this.List(nameof(this.NotchDisplays)) ?? [];
+        set => this.Set(nameof(this.NotchDisplays), value.Distinct().ToArray());
+    }
+
+    /// <summary>
+    /// The closed notch stays where it is. Unlocked, it can be dragged along the top of a display without a
+    /// camera notch. Locked unless changed, so a click that slips doesn't move it.
+    /// </summary>
+    public bool NotchPositionLocked
+    {
+        get => this.Bool(nameof(this.NotchPositionLocked), true);
+        set => this.Set(nameof(this.NotchPositionLocked), value);
+    }
+
+    /// <summary>
+    /// Where the notch was dragged to on each display without a camera notch, as "id|fraction": the fraction
+    /// of the display's width at the notch's centre. A display not listed has it centred.
+    /// </summary>
+    public IReadOnlyList<string> NotchPositions
+    {
+        get => this.List(nameof(this.NotchPositions)) ?? [];
+        set => this.Set(nameof(this.NotchPositions), value.ToArray());
+    }
+
+    /// <summary>Where the notch sits on this display (see <see cref="NotchPositions"/>); 0.5, centred, when it was never moved.</summary>
+    public double NotchPosition(string? displayId)
+    {
+        var saved = this.NotchPositions
+            .Select(p => p.Split('|'))
+            .Where(p => p.Length == 2 && p[0] == displayId)
+            .Select(p => System.Double.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0.5)
+            .FirstOrDefault(0.5);
+        return Math.Clamp(saved, 0, 1);
+    }
+
+    /// <summary>Remembers where the notch was dragged to on a display.</summary>
+    public void SetNotchPosition(string displayId, double position)
+    {
+        var others = this.NotchPositions.Where(p => !p.StartsWith(displayId + "|", StringComparison.Ordinal));
+        this.NotchPositions = others.Append($"{displayId}|{Math.Clamp(position, 0, 1).ToString("0.####", CultureInfo.InvariantCulture)}").ToList();
+    }
+
     public const double MinStandInNotchWidth = 40;
     public const double MinStandInCameraHeight = 24;
     public const double MaxStandInCameraHeight = 48;
     public const double MaxStandInNotchWidth = 400;
-
-    /// <summary>
-    /// On a display without a camera notch, the gap the closed notch leaves between its wings where a camera
-    /// would be, in points. About a MacBook's unless changed; at 0 the wings meet, and the notch is only as
-    /// wide as what it shows.
-    /// </summary>
-    public double StandInCameraWidth
-    {
-        get => this.Double(nameof(this.StandInCameraWidth), 180);
-        set => this.Set(nameof(this.StandInCameraWidth), Math.Clamp(Math.Round(value), 0, MaxStandInCameraWidth));
-    }
 
     /// <summary>
     /// On a display without a camera notch, how tall the closed notch is before any extra height, in points:

@@ -69,9 +69,9 @@ sealed class MacPlatformShell : IPlatformShell
     /// the frozen window's own frame as AppKit animates it, so the trim keeps pace with the window rather
     /// than with a clock of its own.
     /// </summary>
-    public void TrimMorphToWings(Wings wings, double height, double cornerRadius)
+    public void TrimMorphToWings(Window? notchWindow, Wings wings, double height, double cornerRadius)
     {
-        var notch = Application.Current?.Windows.FirstOrDefault(w => w.Title == "Notch")?.Handler?.PlatformView as NSWindow;
+        var notch = notchWindow?.Handler?.PlatformView as NSWindow;
         var frozen = notch?.ChildWindows?.FirstOrDefault(w => w.IgnoresMouseEvents && w.ContentView is NSImageView);
         if (frozen?.ContentView is not { } image)
             return;

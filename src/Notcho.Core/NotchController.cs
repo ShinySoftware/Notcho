@@ -9,7 +9,9 @@ using Notcho.Views;
 namespace Notcho;
 
 /// <summary>
-/// Decides what the notch shows, and when.
+/// Decides what one display's notch shows, and when. <see cref="Notches"/> makes one per display the notch
+/// is on, and each opens and closes on its own; what happens everywhere (a new song, a finished countdown,
+/// the volume keys) shows on each.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,8 +26,7 @@ namespace Notcho;
 /// layout that is already on screen. A rebuild that would produce the same thing is skipped.
 /// </para>
 /// </remarks>
-[Singleton]
-public sealed class NotchController
+public sealed class NotchController : IDisposable
 {
     enum Mode
     {
@@ -40,11 +41,8 @@ public sealed class NotchController
     static readonly TimeSpan FinishedHold = TimeSpan.FromSeconds(6);
     /// <summary>How long a new song holds the panel open when nobody is hovering it.</summary>
     static readonly TimeSpan TrackChangeHold = TimeSpan.FromSeconds(4);
-    static readonly TimeSpan WeatherCheckEvery = TimeSpan.FromMinutes(5);
     /// <summary>How often a game that's on is fetched again.</summary>
     static readonly TimeSpan SportsPollEvery = TimeSpan.FromSeconds(20);
-    /// <summary>The store says when events change; this only catches the day moving on.</summary>
-    static readonly TimeSpan CalendarRefreshEvery = TimeSpan.FromMinutes(15);
     /// <summary>A display change arrives as a burst of notifications; act once it settles.</summary>
     static readonly TimeSpan ScreensSettleDelay = TimeSpan.FromMilliseconds(400);
     /// <summary>A click on the notch this soon after one of its music buttons was the same click, not a second one.</summary>
@@ -102,8 +100,9 @@ public sealed class NotchController
     int hudToken;
     bool rendering;
     bool renderQueued;
-    DateTimeOffset nextCalendarRefresh;
-    DateTimeOffset nextWeatherCheck;
+    bool disposed;
+    /// <summary>Takes this notch's handlers back off the shared services (see <see cref="On"/>).</summary>
+    readonly List<Action> unsubscribe = [];
     int tickToken;
     int screensToken;
     int previewToken;
@@ -179,18 +178,24 @@ public sealed class NotchController
         this.tab = Enum.TryParse<NotchTab>(settings.LastTab, out var t) ? t : NotchTab.Media;
     }
 
-    /// <summary>Opens Settings. Set by the app, which owns the window.</summary>
+    /// <summary>Opens Settings. Set by <see cref="Notches"/>, from the app, which owns the window.</summary>
     public Action? OpenSettings { get; set; }
 
+    /// <summary>The display this notch is on; null for the primary display.</summary>
+    public string? DisplayId => this.notch.DisplayId;
+
     /// <summary>The tabs this platform has, with the capture tool's own name on the Capture tab.</summary>
-    public IReadOnlyList<NotchTabInfo> AvailableTabs => NotchTabInfo.All
+    public IReadOnlyList<NotchTabInfo> AvailableTabs => Available(this.capture, this.hasMirror);
+
+    /// <summary>The tabs a platform with this capture tool, and a camera or not, has.</summary>
+    public static IReadOnlyList<NotchTabInfo> Available(ICaptureTab? capture, bool hasMirror) => NotchTabInfo.All
         .Where(t => t.Tab switch
         {
-            NotchTab.Capture => this.capture is { IsAvailable: true },
-            NotchTab.Mirror => this.hasMirror,
+            NotchTab.Capture => capture is { IsAvailable: true },
+            NotchTab.Mirror => hasMirror,
             _ => true
         })
-        .Select(t => t.Tab == NotchTab.Capture ? t with { Name = this.capture!.Name } : t)
+        .Select(t => t.Tab == NotchTab.Capture ? t with { Name = capture!.Name } : t)
         .ToList();
 
     /// <summary>The tabs in the strip: the ones this platform has, less those turned off in Settings.</summary>
@@ -213,29 +218,36 @@ public sealed class NotchController
         this.notch.PointerEntered += (_, _) => this.OnPointer(true);
         this.notch.PointerExited += (_, _) => this.OnPointer(false);
         this.notch.Tapped += (_, _) => this.OnTapped();
+        // Grabbed to move: a hover that was about to open it is called off.
+        this.notch.DragStarted += (_, _) => ++this.hoverToken;
+        this.notch.DragCompleted += (_, _) =>
+        {
+            if (this.DisplayId is { } id)
+                this.settings.SetNotchPosition(id, this.notch.HorizontalPosition);
+        };
 
-        this.fileDrop.DragEnter += (_, e) =>
+        this.On<EventHandler<FileDragEventArgs>>(h => this.fileDrop.DragEnter += h, h => this.fileDrop.DragEnter -= h, (_, e) =>
         {
             if (!IsNotchWindow(e.Window))
                 return;
             this.dragging = true;
             this.draggingApp = e.Files.Any(f => f.FullPath is { } path && this.tray.Actions.CanRemoveQuarantine(path));
             this.Open(NotchTab.Tray);
-        };
-        this.fileDrop.DragOver += (_, e) =>
+        });
+        this.On<EventHandler<FileDragEventArgs>>(h => this.fileDrop.DragOver += h, h => this.fileDrop.DragOver -= h, (_, e) =>
         {
             if (this.draggingApp && IsNotchWindow(e.Window))
                 this.LiveTray?.DragMoved(e.Position);
-        };
-        this.fileDrop.DragLeave += (_, e) =>
+        });
+        this.On<EventHandler<FileDragEventArgs>>(h => this.fileDrop.DragLeave += h, h => this.fileDrop.DragLeave -= h, (_, e) =>
         {
             if (!IsNotchWindow(e.Window))
                 return;
             this.dragging = false;
             this.EndAppDrag();
             this.ScheduleClose();
-        };
-        this.fileDrop.Dropped += (_, e) =>
+        });
+        this.On<EventHandler<FileDropEventArgs>>(h => this.fileDrop.Dropped += h, h => this.fileDrop.Dropped -= h, (_, e) =>
         {
             if (!IsNotchWindow(e.Window))
                 return;
@@ -250,82 +262,82 @@ public sealed class NotchController
                 _ = this.tray.RemoveQuarantineAsync(app);
             this.Open(NotchTab.Tray);
             this.ScheduleClose();
-        };
+        });
 
-        this.media.Changed += (_, _) =>
+        this.On<EventHandler>(h => this.media.Changed += h, h => this.media.Changed -= h, (_, _) =>
         {
             this.PopOpenOnNewTrack();
             this.Rebuild(NotchTab.Media);
             // Any tab: the controls bar's play/pause follows the player.
             (this.live as PanelView)?.Controls.Tick();
             this.ScheduleTick();
-        };
-        this.countdown.StateChanged += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.countdown.StateChanged += h, h => this.countdown.StateChanged -= h, (_, _) =>
         {
             this.Rebuild(NotchTab.Timer);
             this.ScheduleTick();
-        };
-        this.countdown.Finished += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.countdown.Finished += h, h => this.countdown.Finished -= h, (_, _) =>
         {
             // Opened to say so, not by a hover - so no pointer leaving will close it. Hovering it keeps it.
             this.Open(NotchTab.Timer);
             this.ScheduleClose(FinishedHold);
-        };
-        this.awake.StateChanged += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.awake.StateChanged += h, h => this.awake.StateChanged -= h, (_, _) =>
         {
             this.Rebuild(NotchTab.Awake);
             // The cup comes and goes in the neck too, which a rebuild of the tab it's on leaves alone.
             this.RefreshNeck();
             this.ScheduleTick();
-        };
-        this.calendar.Changed += (_, _) => this.Rebuild(NotchTab.Calendar);
-        this.tray.Changed += (_, _) => this.Rebuild(NotchTab.Tray);
-        this.prompter.StateChanged += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.calendar.Changed += h, h => this.calendar.Changed -= h, (_, _) => this.Rebuild(NotchTab.Calendar));
+        this.On<EventHandler>(h => this.tray.Changed += h, h => this.tray.Changed -= h, (_, _) => this.Rebuild(NotchTab.Tray));
+        this.On<EventHandler>(h => this.prompter.StateChanged += h, h => this.prompter.StateChanged -= h, (_, _) =>
         {
             this.Rebuild(NotchTab.Prompter);
             if (!this.prompter.IsRunning && !this.prompter.IsListening)
                 this.ScheduleClose();
-        };
-        this.prompter.WordChanged += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.prompter.WordChanged += h, h => this.prompter.WordChanged -= h, (_, _) =>
         {
             if (this.live is PanelView { Body: PrompterTab prompterTab })
                 prompterTab.ShowWord();
-        };
-        this.prompter.Scrolled += (_, _) =>
+        });
+        this.On<EventHandler>(h => this.prompter.Scrolled += h, h => this.prompter.Scrolled -= h, (_, _) =>
         {
             if (this.live is PanelView { Body: PrompterTab prompterTab })
                 prompterTab.Scroll();
-        };
-        this.controls.ChangedExternally += (_, kind) => this.ShowHud(kind);
-        this.weather.Changed += (_, _) => this.Rebuild(NotchTab.Weather);
-        this.news.Changed += (_, _) => this.Rebuild(NotchTab.News);
-        this.rss.Changed += (_, _) => this.Rebuild(NotchTab.Rss);
-        this.sports.Changed += (_, _) =>
+        });
+        this.On<EventHandler<HudKind>>(h => this.controls.ChangedExternally += h, h => this.controls.ChangedExternally -= h, (_, kind) => this.ShowHud(kind));
+        this.On<EventHandler>(h => this.weather.Changed += h, h => this.weather.Changed -= h, (_, _) => this.Rebuild(NotchTab.Weather));
+        this.On<EventHandler>(h => this.news.Changed += h, h => this.news.Changed -= h, (_, _) => this.Rebuild(NotchTab.News));
+        this.On<EventHandler>(h => this.rss.Changed += h, h => this.rss.Changed -= h, (_, _) => this.Rebuild(NotchTab.Rss));
+        this.On<EventHandler>(h => this.sports.Changed += h, h => this.sports.Changed -= h, (_, _) =>
         {
             this.Rebuild(NotchTab.Sports);
             // The picked game's score is in the closed notch, which the open panel hangs from.
             this.RefreshNeck();
             this.PollSports();
-        };
-        this.tasks.Changed += (_, _) => this.Rebuild(NotchTab.Tasks);
-        this.clipboard.Changed += (_, _) => this.Rebuild(NotchTab.Clipboard);
-        this.calculator.Changed += (_, _) => this.Rebuild(NotchTab.Calculator);
+        });
+        this.On<EventHandler>(h => this.tasks.Changed += h, h => this.tasks.Changed -= h, (_, _) => this.Rebuild(NotchTab.Tasks));
+        this.On<EventHandler>(h => this.clipboard.Changed += h, h => this.clipboard.Changed -= h, (_, _) => this.Rebuild(NotchTab.Clipboard));
+        this.On<EventHandler>(h => this.calculator.Changed += h, h => this.calculator.Changed -= h, (_, _) => this.Rebuild(NotchTab.Calculator));
         // Typing a task holds the panel open behind the popup; done typing, it closes as usual.
         // One popup serves both (see EntryWindow), so this hears either closing.
-        this.taskEntry.Closed += (_, _) => this.ScheduleClose();
-        this.notes.Changed += (_, _) =>
+        this.On<EventHandler>(h => this.taskEntry.Closed += h, h => this.taskEntry.Closed -= h, (_, _) => this.ScheduleClose());
+        this.On<EventHandler>(h => this.notes.Changed += h, h => this.notes.Changed -= h, (_, _) =>
         {
             this.Rebuild(NotchTab.Notes);
             this.ScheduleTick();
             // A recording keeps the panel open; once it's done, the panel goes back to closing on its own.
             if (!this.notes.IsRecording)
                 this.ScheduleClose();
-        };
+        });
         if (this.capture != null)
-            this.capture.Changed += (_, _) => this.Rebuild(NotchTab.Capture);
-        this.shell.ScreensChanged += (_, _) => this.OnScreensChanged();
+            this.On<EventHandler>(h => this.capture!.Changed += h, h => this.capture!.Changed -= h, (_, _) => this.Rebuild(NotchTab.Capture));
+        this.On<EventHandler>(h => this.shell.ScreensChanged += h, h => this.shell.ScreensChanged -= h, (_, _) => this.OnScreensChanged());
         // Only the settings the Prompter tab draws with; the speed (say) changes nothing on screen.
-        this.settings.Changed += (_, key) =>
+        this.On<EventHandler<string>>(h => this.settings.Changed += h, h => this.settings.Changed -= h, (_, key) =>
         {
             if (key is nameof(AppSettings.TeleprompterScript) or nameof(AppSettings.TeleprompterFontSize) or nameof(AppSettings.TeleprompterWidth) or nameof(AppSettings.TeleprompterHeight) or nameof(AppSettings.TeleprompterFollowVoice))
                 this.Rebuild(NotchTab.Prompter);
@@ -350,30 +362,57 @@ public sealed class NotchController
                 else
                     _ = this.RenderAsync();
             }
-            else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight) or nameof(AppSettings.StandInCameraWidth) or nameof(AppSettings.StandInCameraHeight) or nameof(AppSettings.StandInMinWidth))
+            else if (key is nameof(AppSettings.NotchPositionLocked))
+                this.UpdateDraggable();
+            else if (key is nameof(AppSettings.NotchPositions) && !this.notch.IsDragging)
+                this.notch.HorizontalPosition = this.settings.NotchPosition(this.DisplayId);
+            else if (key is nameof(AppSettings.NotchLeftWidth) or nameof(AppSettings.NotchRightWidth) or nameof(AppSettings.NotchWidthsLocked) or nameof(AppSettings.NotchExtraHeight) or nameof(AppSettings.StandInCameraHeight) or nameof(AppSettings.StandInMinWidth))
                 this.PreviewSize();
             // The panel picks the change up on closing.
             else if (key is nameof(AppSettings.PeekItems) or nameof(AppSettings.PeekMusicButtons) or nameof(AppSettings.ClickToOpen) or nameof(AppSettings.AwakeShowInPeek) && this.mode == Mode.Peek)
                 _ = this.RenderAsync();
-        };
+        });
 
-        this.media.Start();
-        this.controls.Start();
-        this.clipboard.Start();
-        this.awake.StartIfAskedAtLaunch();
-        _ = this.calendar.RefreshAsync();
-        _ = this.weather.RefreshAsync();
-        _ = this.sports.RefreshAsync();
-        var now = this.time.GetUtcNow();
-        this.nextCalendarRefresh = now + CalendarRefreshEvery;
-        this.nextWeatherCheck = now + WeatherCheckEvery;
         this.ScheduleTick();
 
+        this.notch.HorizontalPosition = this.settings.NotchPosition(this.DisplayId);
+        this.UpdateDraggable();
         await this.notch.ShowAsync(this.BuildPeek(), this.ConfigurePeek);
         this.shownKey = this.Key();
     }
 
-    static bool IsNotchWindow(Window? window) => window?.Title == "Notch";
+    /// <summary>A drag or drop over this notch's own window, not another display's notch or Settings.</summary>
+    bool IsNotchWindow(Window? window) => window != null && window == this.notch.Window;
+
+    /// <summary>Hears a shared service's event until disposed, when the handler is taken off again.</summary>
+    void On<T>(Action<T> add, Action<T> remove, T handler) where T : Delegate
+    {
+        add(handler);
+        this.unsubscribe.Add(() => remove(handler));
+    }
+
+    /// <summary>The display went, or the notch was turned off on it: lets go of the shared services and closes the window.</summary>
+    public void Dispose()
+    {
+        if (this.disposed)
+            return;
+        this.disposed = true;
+
+        foreach (var off in this.unsubscribe)
+            off();
+        this.unsubscribe.Clear();
+
+        // Lapse every pending close, HUD, tick and size preview.
+        this.hoverToken++;
+        this.hudToken++;
+        this.tickToken++;
+        this.screensToken++;
+        this.previewToken++;
+
+        (this.live as IDisposable)?.Dispose();
+        this.live = null;
+        this.notch.Dispose();
+    }
 
     /// <summary>
     /// A display was plugged in, removed or rescaled. The notch service only places its window (and reads
@@ -386,13 +425,16 @@ public sealed class NotchController
         var token = ++this.screensToken;
         this.dispatcher.DispatchDelayed(ScreensSettleDelay, async () =>
         {
-            if (token != this.screensToken)
+            if (token != this.screensToken || this.disposed)
                 return;
 
             this.shownKey = null;
             this.reseat = true;
+            // A camera notch may have come or gone with the display: only a plain one can be moved.
+            this.UpdateDraggable();
             await this.RenderAsync();
-            await this.notch.ShowAsync();
+            if (!this.disposed)
+                await this.notch.ShowAsync();
         });
     }
 
@@ -424,12 +466,12 @@ public sealed class NotchController
     double PeekHeight => this.Cutout.Height + this.settings.NotchExtraHeight;
 
     /// <summary>
-    /// The camera cut-out the notch is built around. A display without one (an external monitor) gets a
-    /// stand-in, drawn black, the size Settings says (about a MacBook's, unless changed; as wide as nothing at all).
+    /// The camera cut-out the notch is built around. A display without one (an external monitor) has no
+    /// camera to leave room for, so the wings meet in the middle: no width, at the height Settings says.
     /// </summary>
     Size Cutout => this.notch.HardwareNotchSize is { Width: > 0, Height: > 0 } hardware
         ? hardware
-        : new Size(this.settings.StandInCameraWidth, this.settings.StandInCameraHeight);
+        : new Size(0, this.settings.StandInCameraHeight);
 
     bool HasHardwareCutout => this.notch.HardwareNotchSize.Width > 0;
 
@@ -440,7 +482,7 @@ public sealed class NotchController
     /// </summary>
     double PeekMinWidth => this.HasHardwareCutout ? 0 : this.settings.StandInMinWidth;
 
-    string SizeKey => $"{this.settings.NotchLeftWidth}|{this.settings.NotchRightWidth}|{this.settings.NotchWidthsLocked}|{this.settings.NotchExtraHeight}|{this.settings.StandInCameraWidth}|{this.settings.StandInCameraHeight}|{this.settings.StandInMinWidth}";
+    string SizeKey => $"{this.settings.NotchLeftWidth}|{this.settings.NotchRightWidth}|{this.settings.NotchWidthsLocked}|{this.settings.NotchExtraHeight}|{this.settings.StandInCameraHeight}|{this.settings.StandInMinWidth}";
 
     // ---------------------------------------------------------------------------------------------
     // Hover
@@ -452,12 +494,12 @@ public sealed class NotchController
         var token = ++this.hoverToken;
         if (over)
         {
-            if (this.settings.ClickToOpen)
+            if (this.OpensOnClick)
                 return;
 
             this.dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(this.settings.HoverOpenDelay), () =>
             {
-                if (token == this.hoverToken && this.notch.IsPointerOver && this.mode != Mode.Panel)
+                if (token == this.hoverToken && this.notch.IsPointerOver && !this.notch.IsDragging && this.mode != Mode.Panel)
                     this.Open(this.tab);
             });
         }
@@ -476,7 +518,7 @@ public sealed class NotchController
     /// </remarks>
     void OnTapped()
     {
-        if (!this.settings.ClickToOpen || this.mode == Mode.Panel)
+        if (!this.OpensOnClick || this.mode == Mode.Panel)
             return;
 
         this.dispatcher.Dispatch(() =>
@@ -487,6 +529,20 @@ public sealed class NotchController
     }
 
     void OnMusicButtonPressed() => this.musicButtonPressedAt = this.time.GetUtcNow();
+
+    /// <summary>
+    /// The notch can be dragged here: its position is unlocked in Settings and there's no camera to hug.
+    /// </summary>
+    bool Movable => !this.settings.NotchPositionLocked && !this.HasHardwareCutout;
+
+    /// <summary>
+    /// Opens on a click rather than a hover: asked for in Settings, or while it can be moved, so resting on
+    /// it to grab it doesn't open it first.
+    /// </summary>
+    bool OpensOnClick => this.settings.ClickToOpen || this.Movable;
+
+    /// <summary>The closed notch (or a HUD) can be dragged; the open panel can't, its contents take the mouse.</summary>
+    void UpdateDraggable() => this.notch.IsDraggable = this.Movable && this.mode != Mode.Panel;
 
     /// <summary>The music buttons the closed notch shows: none unless it opens on a click.</summary>
     IReadOnlySet<PeekMusicButton> PeekButtons => this.settings.ClickToOpen
@@ -637,6 +693,7 @@ public sealed class NotchController
             this.tabBeforePop = null;
         }
         this.mode = next;
+        this.UpdateDraggable();
         _ = this.RenderAsync();
         this.ScheduleTick();
         this.PollSports();
@@ -680,6 +737,8 @@ public sealed class NotchController
     /// </summary>
     async Task RenderAsync()
     {
+        if (this.disposed)
+            return;
         if (this.rendering)
         {
             this.renderQueued = true;
@@ -694,7 +753,7 @@ public sealed class NotchController
                 this.renderQueued = false;
                 await this.RenderOnceAsync();
             }
-            while (this.renderQueued);
+            while (this.renderQueued && !this.disposed);
         }
         finally
         {
@@ -773,7 +832,7 @@ public sealed class NotchController
     void TrimMorph(IWinged? content)
     {
         if (content?.Wings is { } wings && (wings.LeftInset > 0 || wings.RightInset > 0))
-            this.shell.TrimMorphToWings(wings, this.PeekHeight, PeekView.CornerRadius);
+            this.shell.TrimMorphToWings(this.notch.Window, wings, this.PeekHeight, PeekView.CornerRadius);
     }
 
     /// <summary>
@@ -932,7 +991,7 @@ public sealed class NotchController
 
         this.dispatcher.DispatchDelayed(delay, () =>
         {
-            if (token != this.tickToken)
+            if (token != this.tickToken || this.disposed)
                 return;
             this.OnTick();
             this.ScheduleTick();
@@ -941,27 +1000,8 @@ public sealed class NotchController
 
     void OnTick()
     {
-        // Due times rather than "second == 0": a tick can be late (App Nap, a busy main thread), and a
-        // skipped second must not be a skipped refresh.
-        var now = this.time.GetUtcNow();
-
-        // Checked-off tasks clear away a day later; the minute tick is plenty for that.
-        this.tasks.Prune();
-
-        if (now >= this.nextCalendarRefresh)
-        {
-            this.nextCalendarRefresh = now + CalendarRefreshEvery;
-            _ = this.calendar.RefreshAsync();
-        }
-
-        // The forecast refreshes itself when stale (20 minutes); asking every five is cheap.
-        if (now >= this.nextWeatherCheck)
-        {
-            this.nextWeatherCheck = now + WeatherCheckEvery;
-            _ = this.weather.RefreshAsync();
-        }
-
-        // Stories too, while their tab shows: each feed is fetched again once it's ten minutes old.
+        // The calendar, the forecast and the tasks are refreshed once for every notch (see Notches).
+        // Stories, while their tab shows: each feed is fetched again once it's ten minutes old.
         if (this.mode == Mode.Panel && this.tab == NotchTab.News)
             _ = this.news.RefreshAsync();
         if (this.mode == Mode.Panel && this.tab == NotchTab.Rss)

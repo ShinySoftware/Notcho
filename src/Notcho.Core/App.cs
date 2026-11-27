@@ -10,14 +10,14 @@ namespace Notcho;
 public sealed class App : Application
 {
     readonly IServiceProvider services;
-    readonly NotchController notch;
+    readonly Notches notch;
     readonly IPlatformShell shell;
     readonly Services.UpdateService updates;
     Window? settingsWindow;
     Window? updateWindow;
     bool started;
 
-    public App(IServiceProvider services, NotchController notch, IPlatformShell shell, IPlatformUi ui, Services.UpdateService updates)
+    public App(IServiceProvider services, Notches notch, IPlatformShell shell, IPlatformUi ui, Services.UpdateService updates)
     {
         this.services = services;
         this.notch = notch;

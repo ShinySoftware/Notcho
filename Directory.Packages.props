@@ -22,10 +22,10 @@
         <PackageVersion Include="Shiny.Gps" Version="7.2.0" />
         <PackageVersion Include="Shiny.Gps.Linux" Version="7.2.0" />
         <PackageVersion Include="Shiny.Hosting.Maui" Version="7.2.0" />
-        <PackageVersion Include="Shiny.Maui.Controls" Version="3.0.0" />
+        <PackageVersion Include="Shiny.Maui.Controls" Version="3.0.1" />
         <PackageVersion Include="Shiny.Maui.Controls.Analysis.Barcode" Version="3.0.0" />
         <PackageVersion Include="Shiny.Maui.Controls.Camera" Version="3.0.0" />
-        <PackageVersion Include="Shiny.Maui.Controls.Desktop" Version="3.0.0" />
+        <PackageVersion Include="Shiny.Maui.Controls.Desktop" Version="3.0.1" />
         <PackageVersion Include="Shiny.Maui.Controls.Markdown" Version="3.0.0" />
         <PackageVersion Include="Shiny.Speech" Version="3.0.0" />
         <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="11.0.0" />

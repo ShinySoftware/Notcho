@@ -45,7 +45,8 @@ public interface IPlatformShell
     /// frozen image in step with the morph instead, down to <paramref name="wings"/>' own outline. Nothing
     /// to do where no frozen image is left behind.
     /// </summary>
+    /// <param name="notch">The notch window that was swapped: with a notch on more than one display, there's one each.</param>
     /// <param name="height">The new content's height: where the window's morph is heading.</param>
     /// <param name="cornerRadius">The wings' bottom corners.</param>
-    void TrimMorphToWings(Views.Wings wings, double height, double cornerRadius) { }
+    void TrimMorphToWings(Window? notch, Views.Wings wings, double height, double cornerRadius) { }
 }

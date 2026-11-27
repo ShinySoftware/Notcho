@@ -46,14 +46,16 @@ public sealed class SettingsPage : ContentPage
     Action? flushScript;
 
     readonly UpdateService updates;
+    readonly Notches notches;
     /// <summary>The release the Update section was built for, so only a different one rebuilds the page.</summary>
     readonly string? shownUpdate;
     /// <summary>The page's table, under the header: what Rebuild reads the scroll position from.</summary>
     readonly TableView table;
 
-    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, SportsService sports, NewsService news, RssService rss, NotchController notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator, IFileDialogs dialogs, TimeProvider time)
+    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, SportsService sports, NewsService news, RssService rss, Notches notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator, IFileDialogs dialogs, TimeProvider time)
     {
         this.updates = updates;
+        this.notches = notch;
         this.shownUpdate = updates.Available?.Version;
         this.Title = "Notcho";
         this.BackgroundColor = Ui.Surface;
@@ -100,6 +102,12 @@ public sealed class SettingsPage : ContentPage
                 sections.Add(this.BackupSection(settings, dialogs, time));
                 break;
             case SettingsCategory.Notch:
+                // Only with a choice to make: a second display connected.
+                if (DisplaysSection(settings, notch) is { } displays)
+                    sections.Add(displays);
+                // Only where there's a display to move it on: one without a camera notch.
+                if (PositionSection(settings, notch) is { } position)
+                    sections.Add(position);
                 sections.Add(this.NotchSection(settings));
                 sections.Add(this.FillSection(settings, closed: true));
                 sections.Add(this.FillSection(settings, closed: false));
@@ -164,6 +172,71 @@ public sealed class SettingsPage : ContentPage
     // ---------------------------------------------------------------------------------------------
     // Sections
     // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// A switch for each connected display, with more than one: the notch can be on any of them, and on
+    /// more than one at once. Null with only one display. The last one on can't be turned off.
+    /// </summary>
+    static TableSection? DisplaysSection(AppSettings settings, Notches notches)
+    {
+        var displays = notches.Displays;
+        if (displays.Count < 2)
+            return null;
+
+        var section = Section("Displays", "The displays the notch shows on. Each opens and closes on its own; a new song, a finished countdown or the volume keys show on all of them. A display with a camera notch gets the notch around its camera.");
+        foreach (var display in displays)
+        {
+            var on = Notches.Chosen(displays, settings.NotchDisplays).Any(d => d.Id == display.Id);
+            var cell = NewSwitchCell(display.Name, Ui.SymbolSource(display.HasHardwareNotch ? "laptopcomputer" : "display", 16, Ui.Blue), on);
+            if (display.IsPrimary)
+                cell.Description = "Main display";
+            cell.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != SwitchCell.OnProperty.PropertyName)
+                    return;
+
+                var current = notches.Displays;
+                var chosen = Notches.Chosen(current, settings.NotchDisplays).Select(d => d.Id).Where(id => id != display.Id).ToList();
+                if (cell.On)
+                {
+                    chosen.Add(display.Id);
+                }
+                else if (chosen.Count == 0)
+                {
+                    // After the click: set now, AppKit finishes the click after and leaves it drawn off.
+                    cell.Dispatcher.Dispatch(() => cell.On = true);
+                    return;
+                }
+
+                // Picked displays that aren't plugged in now stay picked, for when they are again.
+                var unplugged = settings.NotchDisplays.Where(id => current.All(d => d.Id != id));
+                settings.NotchDisplays = unplugged.Concat(chosen).ToList();
+            };
+            section.Cells.Add(cell);
+        }
+        return section;
+    }
+
+    /// <summary>
+    /// Lock or unlock where the notch sits, and put it back in the middle. Null when every display has a
+    /// camera notch, which the notch always stays around.
+    /// </summary>
+    static TableSection? PositionSection(AppSettings settings, Notches notches)
+    {
+        var displays = notches.Displays;
+        if (displays.Count > 0 && displays.All(d => d.HasHardwareNotch))
+            return null;
+
+        var section = Section("Position", "Unlocked, drag the closed notch along the top of a display without a camera notch to put it where you want. Each display remembers its own spot. While it's unlocked the notch opens on a click instead of a hover, so you can grab it. On a display with a camera notch it always stays around the camera.");
+        section.Cells.Add(Switch("Lock position", "lock.fill", Ui.Orange, settings.NotchPositionLocked, locked => settings.NotchPositionLocked = locked));
+        section.Cells.Add(new CommandCell
+        {
+            Title = "Move Back to the Middle",
+            IconSource = Ui.SymbolSource("arrow.left.and.right", 16, Ui.Blue),
+            Command = new Command(() => settings.NotchPositions = [])
+        });
+        return section;
+    }
 
     TableSection NotchSection(AppSettings settings)
     {
@@ -448,13 +521,12 @@ public sealed class SettingsPage : ContentPage
     static bool Same(Color a, Color b) => a.ToArgbHex() == b.ToArgbHex();
 
     /// <summary>
-    /// The stand-in for a camera notch on a display without one. Its sliders show the change on the notch as
+    /// The closed notch on a display without a camera notch. Its sliders show the change on the notch as
     /// they move, but only there: around a real camera they change nothing.
     /// </summary>
     static TableSection StandInSection(AppSettings settings)
     {
-        var section = Section("Without a Camera Notch", "On a display with no camera notch, such as an external monitor, the closed notch stands in for one. Space for the camera is the gap it leaves where a camera would be: at 0 there's none, and the notch is only as wide as what it shows. Height is how tall it is before any extra height set above. It never gets narrower than the narrowest width, even with nothing to show, so there's always something to hover.");
-        section.Cells.Add(SliderCell("Space for the camera", "arrow.left.and.right", Ui.Teal, settings.StandInCameraWidth, AppSettings.MaxStandInCameraWidth, [], v => settings.StandInCameraWidth = v));
+        var section = Section("Without a Camera Notch", "On a display with no camera notch, such as an external monitor, there's no camera to leave room for, so the closed notch is only as wide as what it shows. Height is how tall it is before any extra height set above. It never gets narrower than the narrowest width, even with nothing to show, so there's always something to hover.");
         section.Cells.Add(SliderCell("Height", "arrow.up.and.down.square", Ui.Purple, settings.StandInCameraHeight, AppSettings.MaxStandInCameraHeight, [], v => settings.StandInCameraHeight = v, AppSettings.MinStandInCameraHeight));
         section.Cells.Add(SliderCell("Narrowest width", "arrow.left.and.right.square", Ui.Indigo, settings.StandInMinWidth, AppSettings.MaxStandInNotchWidth, [], v => settings.StandInMinWidth = v, AppSettings.MinStandInNotchWidth));
         return section;
@@ -1110,6 +1182,7 @@ public sealed class SettingsPage : ContentPage
     {
         base.OnAppearing();
         this.updates.Changed += this.OnUpdatesChanged;
+        this.notches.DisplaysChanged += this.OnDisplaysChanged;
         // Found while the page was away.
         this.OnUpdatesChanged(this, EventArgs.Empty);
     }
@@ -1118,6 +1191,14 @@ public sealed class SettingsPage : ContentPage
     {
         base.OnDisappearing();
         this.updates.Changed -= this.OnUpdatesChanged;
+        this.notches.DisplaysChanged -= this.OnDisplaysChanged;
+    }
+
+    /// <summary>A display plugged in or out: the Displays section lists what's connected now.</summary>
+    void OnDisplaysChanged(object? sender, EventArgs e)
+    {
+        if (category == SettingsCategory.Notch)
+            this.Dispatcher.Dispatch(() => this.Rebuild());
     }
 
     void OnUpdatesChanged(object? sender, EventArgs e)

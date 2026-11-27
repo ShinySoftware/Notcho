@@ -127,6 +127,11 @@ sealed class PeekView : Grid, ILiveView, IWinged
     static readonly Thickness MusicButtonPadding = new(5, 4);
     /// <summary>Kept clear between a wing's content and the camera.</summary>
     const double CameraGap = 6;
+    /// <summary>
+    /// Kept clear between a wing's content and the middle with no camera there, so the two wings read as one
+    /// row, spaced like the parts within a wing.
+    /// </summary>
+    const double MiddleGap = WingSpacing / 2;
     /// <summary>Between a wing's content and the notch's outer edge (the notch itself has no padding).</summary>
     public const double EdgeGap = 12;
     /// <summary>The black's bottom corners.</summary>
@@ -174,6 +179,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// Returns where the black is: how far in from each column's outer edge its wing's black starts (where
     /// content should begin), and the whole width.
     /// </summary>
+    /// <param name="cutoutWidth">The camera's width; 0 on a display without one, where the wings meet.</param>
     /// <param name="minWidth">
     /// The narrowest the black may be. Any shortfall widens the middle, where the camera is (or would be),
     /// so the wings' content stays at the outer edges.
@@ -182,7 +188,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     public static Wings Lay(Grid grid, double cutoutWidth, double leftWidth, double rightWidth, double minWidth, out Border black)
     {
         var wing = Math.Max(leftWidth, rightWidth);
-        var middle = Math.Max(Math.Max(cutoutWidth, 8), minWidth - leftWidth - rightWidth);
+        var middle = Math.Max(Math.Max(cutoutWidth, 0), minWidth - leftWidth - rightWidth);
         grid.ColumnDefinitions =
         [
             new ColumnDefinition(wing),
@@ -302,8 +308,9 @@ sealed class PeekView : Grid, ILiveView, IWinged
         var split = Balance(parts.Select(p => p.Width).ToList(), rightText != null);
         var left = Wing(parts.Take(split).ToList(), LayoutOptions.Start, out var leftContent);
         var right = Wing(parts.Skip(split).ToList(), LayoutOptions.End, out var rightContent);
-        var leftNeeds = left != null ? Math.Ceiling(EdgeGap + leftContent + CameraGap) : 0;
-        var rightNeeds = right != null ? Math.Ceiling(CameraGap + rightContent + EdgeGap) : 0;
+        var innerGap = cutoutWidth > 0 ? CameraGap : MiddleGap;
+        var leftNeeds = left != null ? Math.Ceiling(EdgeGap + leftContent + innerGap) : 0;
+        var rightNeeds = right != null ? Math.Ceiling(innerGap + rightContent + EdgeGap) : 0;
 
         var (leftWidth, rightWidth) = Widths(leftWish, rightWish, locked, leftNeeds, rightNeeds);
         return new PeekView(cutoutWidth, leftWidth, rightWidth, minWidth, height, left, right, rightText, readings, showWeather, countdown, calendar, weather, stats, time);
