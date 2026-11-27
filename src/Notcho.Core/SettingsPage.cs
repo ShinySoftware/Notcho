@@ -1137,6 +1137,7 @@ public sealed class SettingsPage : ContentPage
         if (!startup.IsSupported)
         {
             section.Cells.Add(new LabelCell { Title = "Open at login", Description = "Not available on this system.", IsSelectable = false });
+            section.Cells.Add(QuitButton(shell));
             return section;
         }
 
@@ -1182,6 +1183,7 @@ public sealed class SettingsPage : ContentPage
 
         section.Cells.Add(login);
         section.Cells.Add(openSettings);
+        section.Cells.Add(QuitButton(shell));
         return section;
     }
 
@@ -1232,11 +1234,18 @@ public sealed class SettingsPage : ContentPage
             IconSource = Ui.SymbolSource("shippingbox.fill", 16, Ui.Purple),
             Command = new Command(() => _ = Launcher.OpenAsync("https://www.shinylib.net"))
         });
+        return section;
+    }
 
+    /// <summary>
+    /// Quitting, in General - the first thing Settings shows. With no Dock or menu-bar icon, Settings is
+    /// the only way out, so it shouldn't be hidden at the end of About.
+    /// </summary>
+    static ButtonCell QuitButton(IPlatformShell shell)
+    {
         var quit = Button("Quit Notcho", shell.Quit);
         quit.ButtonTextColor = Ui.Red;
-        section.Cells.Add(quit);
-        return section;
+        return quit;
     }
 
     // ---------------------------------------------------------------------------------------------
