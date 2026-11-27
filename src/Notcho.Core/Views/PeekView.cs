@@ -9,6 +9,7 @@ public enum PeekItem
 {
     Music,
     Weather,
+    Sports,
     Cpu,
     Gpu,
     Memory,
@@ -49,13 +50,14 @@ public sealed record PeekMusicButtonInfo(PeekMusicButton Button, string Name, st
 public sealed record PeekItemInfo(PeekItem Item, string Name, string Symbol, Color Color, string? Tag = null)
 {
     /// <summary>A system reading, sampled every second while it shows.</summary>
-    public bool IsReading => this.Item is not (PeekItem.Music or PeekItem.Weather);
+    public bool IsReading => this.Item is not (PeekItem.Music or PeekItem.Weather or PeekItem.Sports);
 
     /// <summary>Every item, in Settings' order - and, for the readings, the notch's.</summary>
     public static readonly IReadOnlyList<PeekItemInfo> All =
     [
         new(PeekItem.Music, "What's playing", "music.note", Ui.Red),
         new(PeekItem.Weather, "Weather", "cloud.sun.fill", Ui.Blue),
+        new(PeekItem.Sports, "Score of a picked game", "sportscourt.fill", Ui.Green),
         new(PeekItem.Cpu, "CPU load", "cpu", Ui.Teal, "CPU"),
         new(PeekItem.Gpu, "GPU load", "cpu", Ui.Purple, "GPU"),
         new(PeekItem.Memory, "Memory used", "memorychip", Ui.Green, "MEM"),
@@ -121,6 +123,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     const double ReadingSpacing = 3;
     const double MusicButtonSize = 11;
     const double AwakeSymbolSize = 12;
+    const double ScoreLogoSize = 16;
     static readonly Thickness MusicButtonPadding = new(5, 4);
     /// <summary>Kept clear between a wing's content and the camera.</summary>
     const double CameraGap = 6;
@@ -213,7 +216,7 @@ sealed class PeekView : Grid, ILiveView, IWinged
     /// <param name="buttons">The music buttons to show while there's a track; empty unless the notch opens on a click.</param>
     /// <param name="pressed">A music button was clicked, before it acts - so the notch can tell it from a click on itself.</param>
     /// <param name="awake">Keeping awake, and Settings wants the cup that says so.</param>
-    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, bool awake, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SystemStatsService stats, TimeProvider time)
+    public static PeekView? Create(double cutoutWidth, double leftWish, double rightWish, bool locked, double minWidth, double height, bool preview, IReadOnlySet<PeekItem> items, IReadOnlySet<PeekMusicButton> buttons, Action pressed, bool awake, INowPlayingService media, CountdownService countdown, CalendarService calendar, WeatherService weather, SportsService sports, SystemStatsService stats, TimeProvider time)
     {
         // Every part with its width, in order from the left wing's outer edge round to the right wing's.
         var parts = new List<(View View, double Width)>();
@@ -254,6 +257,21 @@ sealed class PeekView : Grid, ILiveView, IWinged
                 Add(Reading(info, stats.Current, out var value, out var width), width);
                 readings.Add((info.Item, value));
             }
+        }
+
+        // The game picked on the Sports tab, while it's on: the logos either side of the score, like a Live Activity.
+        if (items.Contains(PeekItem.Sports) && sports.PinnedGame is { } game)
+        {
+            var text = $"{game.Away.Score ?? "0"}-{game.Home.Score ?? "0"}";
+            var score = Ui.Label(text, RightTextSize, bold: true);
+            score.VerticalOptions = LayoutOptions.Center;
+            var live = new HorizontalStackLayout
+            {
+                Spacing = RightSpacing,
+                VerticalOptions = LayoutOptions.Center,
+                Children = { SportsLogo.Create(sports, game.Away.Team.Logo, ScoreLogoSize), score, SportsLogo.Create(sports, game.Home.Team.Logo, ScoreLogoSize) }
+            };
+            Add(live, 2 * ScoreLogoSize + 2 * RightSpacing + Math.Ceiling(TextWidth(text)));
         }
 
         if (awake)

@@ -359,6 +359,43 @@ public sealed class AppSettings
         set => this.Set(nameof(this.WeatherSelected), value ?? "", notify: false);
     }
 
+    /// <summary>The leagues the Sports tab follows, by ESPN path ("hockey/nhl"), in the strip's order.</summary>
+    public IReadOnlyList<string> SportsLeagues
+    {
+        get => this.List(nameof(this.SportsLeagues)) ?? SportsLeague.Defaults;
+        set => this.Set(nameof(this.SportsLeagues), value.Distinct().ToArray());
+    }
+
+    /// <summary>Favourite teams. Stored as "league|id|abbreviation|name|short name|logo|colour|alternate colour" strings.</summary>
+    public IReadOnlyList<SportsTeam> SportsTeams
+    {
+        get => (this.List(nameof(this.SportsTeams)) ?? [])
+            .Select(s => s.Split('|'))
+            .Where(p => p.Length == 8)
+            .Select(p => new SportsTeam(p[0], p[1], p[2], p[3], p[4], NullIfEmpty(p[5]), NullIfEmpty(p[6]), NullIfEmpty(p[7])))
+            .ToList();
+        set => this.Set(
+            nameof(this.SportsTeams),
+            value.Select(t => String.Join('|', new[] { t.League, t.Id, t.Abbreviation, t.Name, t.ShortName, t.Logo ?? "", t.Color ?? "", t.AlternateColor ?? "" }.Select(s => s.Replace("|", " ")))).ToArray()
+        );
+    }
+
+    /// <summary>The Sports tab's chip: "mine" for your teams, or a league's key.</summary>
+    public string? SportsFilter
+    {
+        get => this.Text(nameof(this.SportsFilter));
+        set => this.Set(nameof(this.SportsFilter), value ?? "", notify: false);
+    }
+
+    /// <summary>"league|event id" of the game whose score the closed notch shows while it's on; null for none.</summary>
+    public string? SportsPinnedGame
+    {
+        get => this.Text(nameof(this.SportsPinnedGame)) is { Length: > 0 } key ? key : null;
+        set => this.Set(nameof(this.SportsPinnedGame), value ?? "", notify: false);
+    }
+
+    static string? NullIfEmpty(string s) => s.Length == 0 ? null : s;
+
     /// <summary>Open at login has been set up on a first launch. It only happens once.</summary>
     public bool LoginItemSetUp
     {

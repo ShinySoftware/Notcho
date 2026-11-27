@@ -54,6 +54,10 @@ static class SymbolGlyphs
         ["text.alignleft"] = "",
         ["pin"] = "",
         ["pin.fill"] = "",
+        ["sportscourt.fill"] = "\uE7FC",
+        ["list.number"] = "\uEA37",
+        ["star"] = "\uE734",
+        ["star.fill"] = "\uE735",
         ["gearshape.fill"] = "",
 
         // Weather

@@ -60,6 +60,7 @@ While collapsed, the notch shows a "wing" either side of the camera. From the le
 - what's playing: the artwork, and bars in the artwork's colour (flat when paused);
 - any music buttons you've turned on (previous, play/pause, next);
 - any system readings you've turned on (CPU, GPU, memory, network, disk);
+- a game's live score, with both logos: turn on **Score of a picked game** in Settings, then pick the game with **Show on notch** on its page in the Sports tab. It shows while the game is on and comes off when it's over;
 - a cup while Keep Awake is on;
 - last, at the right edge: a running timer, a meeting starting in the next 15 minutes, or the weather where you are, in that order.
 
@@ -76,6 +77,11 @@ Artwork, title, a scrubber and previous/play/next for Apple Music and Spotify, o
 Like the iOS widget: the conditions now, the next twelve hours, and the week. Each day's low-to-high bar sits on the week's range, and today's bar has a dot at the current temperature. It works from where you are, or any cities you add in Settings; switch between them with ‹ ›. Temperatures are °C or °F, automatic by region: change it in Settings, or tap the temperature to flip it.
 
 <img src="docs/screenshots/weather.png" width="668" alt="Weather tab with hourly and 7-day forecast" />
+
+### Sports
+Like Apple Sports. Follow your leagues (NFL, NBA, MLB, NHL, WNBA, MLS, NWSL, the Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, the Champions League and college football and basketball) and pick your teams in Settings, or turn leagues on and off from the edit button after the chips in the tab itself. Chips across the top switch between **My Teams** and each league; step through the days with ‹ ›. Each game is a card with both logos, the score, and the clock in red while it's on, the final, or the start time and network before.
+
+Click a game for its line score, the team stats side by side on bars split in the teams' colours, and each side's leaders. **Standings** shows a league's table by conference or division, with your teams picked out. Click a team (in the standings or on a game) for its recent results and its next games, and use the star there to add it to My Teams. On a day none of your teams play, My Teams shows when each plays next.
 
 ### File Tray
 Drop files onto the notch to shelve them. Copy them back out (⌘V in Finder pastes them), AirDrop them, reveal or open them, or clear the tray. Files that move or are deleted drop off on their own. Photos from the mirror and voice notes can be put here too.
@@ -158,7 +164,7 @@ On a MacBook the camera's own cut-out always stays black, so a colour shows eith
 ### And
 - **Pin** (⦿) keeps the panel open.
 - **Open at login** is turned on the first time the app runs, and after that it's yours to change in Settings. If macOS asks you to approve it in System Settings ▸ General ▸ Login Items, Settings says so and opens that page. If you turn it off there later, Settings shows that too, rather than a switch that's lying.
-- **Settings** (⚙ in the panel) holds the notch size, its colours, (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
+- **Settings** (⚙ in the panel) holds the notch size, its colours, (and, for a display without a camera notch, how much room to leave for one), how long to hover before it opens, which tabs show, the teleprompter script, calculator options, Keep Awake options, weather places and units, sports leagues and teams, the HUD toggles, permissions and open at login. Turn off the tabs you don't use and the rest spread out across the strip.
 - It's an agent app (`LSUIElement`) with no Dock or menu-bar icon. To get back to Settings when the notch isn't handy, open Notcho again (from Finder, Spotlight or Launchpad) while it's running. Quit it from Settings.
 
 ## Website
@@ -185,7 +191,7 @@ dotnet build -c Release
 open src/Notcho/bin/Release/net11.0-macos/osx-arm64/Notcho.app
 ```
 
-Debug builds accept `--open <Media|Weather|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Awake|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
+Debug builds accept `--open <Media|Weather|Sports|Tray|Stats|Capture|Mirror|Notes|Tasks|Clipboard|Calendar|Timer|Awake|Calculator|Prompter>` to start with the panel pinned open on a tab, which makes the UI drivable without a mouse:
 
 ```bash
 src/Notcho/bin/Debug/net11.0-macos/osx-arm64/Notcho.app/Contents/MacOS/Notcho --open Weather
@@ -202,21 +208,21 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 | Package | Version | Used for |
 |---|---|---|
 | [Microsoft.Maui.Controls](https://www.nuget.org/packages/Microsoft.Maui.Controls) | 11.0.10 | The UI framework |
-| [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | .NET MAUI on native AppKit (`net11.0-macos`), not Mac Catalyst |
-| [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.15 | MAUI Essentials for the AppKit head |
-| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 7.1.0 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
-| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 7.1.0 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
+| [Microsoft.Maui.Platforms.MacOS](https://github.com/dotnet/maui-labs) | 0.1.0-preview.16 | .NET MAUI on native AppKit (`net11.0-macos`), not Mac Catalyst |
+| [Microsoft.Maui.Platforms.MacOS.Essentials](https://github.com/dotnet/maui-labs) | 0.1.0-preview.16 | MAUI Essentials for the AppKit head |
+| [Shiny.Core](https://www.nuget.org/packages/Shiny.Core) | 7.2.0 | `IAppStartupInstaller`: open at login (an `SMAppService` login item), with the approval and turned-off states |
+| [Shiny.Calendar](https://www.nuget.org/packages/Shiny.Calendar) | 7.2.0 | The Calendar tab and the meeting peek: calendars and today's and tomorrow's events, with permissions through Shiny.Core |
 | [Shiny.Maui.Controls](https://www.nuget.org/packages/Shiny.Maui.Controls) | 3.0.0 | `NotchView`, the surface that morphs to fit its content; `MotionIconView` for the music bars; `TableView` for Settings |
 | [Shiny.Maui.Controls.Desktop](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop) | 3.0.0 | `INotchWindowService` (the notch window, hover tracking, camera cut-out size), window-level file drop, and the quick entry window tasks are typed into |
 | [Shiny.Maui.Controls.Camera](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera) | 3.0.0 | `CameraView` for the mirror: preview, looks, camera choice and photos |
 | [Shiny.Maui.Controls.Analysis.Barcode](https://www.nuget.org/packages/Shiny.Maui.Controls.Analysis.Barcode) | 3.0.0 | The mirror's QR reader: spots a web link in view and offers to open it |
 | [Shiny.Audio](https://www.nuget.org/packages/Shiny.Audio) | 3.0.0 | Voice notes: recording from a chosen microphone, and playback |
-| [Shiny.Gps](https://www.nuget.org/packages/Shiny.Gps) | 7.1.0 | The weather's "where I am": `IGpsManager` for the fix (CoreLocation on macOS) and `IGeocoder` to name it (MapKit on macOS 26+, OpenStreetMap Nominatim on Windows and Linux) |
-| [Shiny.Gps.Linux](https://www.nuget.org/packages/Shiny.Gps.Linux) | 7.1.0 | The GTK head's `IGpsManager`, over GeoClue |
-| [Shiny.Hosting.Maui](https://www.nuget.org/packages/Shiny.Hosting.Maui) | 7.1.0 | `UseShiny()`: Shiny's host, stores and startup tasks |
+| [Shiny.Gps](https://www.nuget.org/packages/Shiny.Gps) | 7.2.0 | The weather's "where I am": `IGpsManager` for the fix (CoreLocation on macOS) and `IGeocoder` to name it (MapKit on macOS 26+, OpenStreetMap Nominatim on Windows and Linux) |
+| [Shiny.Gps.Linux](https://www.nuget.org/packages/Shiny.Gps.Linux) | 7.2.0 | The GTK head's `IGpsManager`, over GeoClue |
+| [Shiny.Hosting.Maui](https://www.nuget.org/packages/Shiny.Hosting.Maui) | 7.2.0 | `UseShiny()`: Shiny's host, stores and startup tasks |
 | [Shiny.Extensions.Stores](https://www.nuget.org/packages/Shiny.Extensions.Stores) | 6.0.2 | Settings, on NSUserDefaults (a settings file on other platforms) |
 | [Shiny.Extensions.DependencyInjection](https://www.nuget.org/packages/Shiny.Extensions.DependencyInjection) | 6.0.2 | `[Singleton]`-attributed services, registered by a source generator |
-| [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.14 | Debug builds only: UI inspection and automation |
+| [Microsoft.Maui.DevFlow.Agent](https://github.com/dotnet/maui-labs) | 0.1.0-preview.16 | Debug builds only: UI inspection and automation |
 
 | Apple framework / service | Used for |
 |---|---|
@@ -229,6 +235,7 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 | IOKit, mach `host_statistics`, `sysctl`, `getifaddrs` | GPU utilisation, disk bytes, CPU and memory, network bytes |
 | EventKit | Calendar events |
 | [Open-Meteo](https://open-meteo.com) | Forecasts and city search: free, no API key |
+| [ESPN](https://www.espn.com) | Scores, schedules, box scores, standings and team logos, from its public site API: free, no key |
 | [OpenStreetMap Nominatim](https://nominatim.org) | The name of where you are on Windows and Linux, through Shiny.Gps's geocoder. © OpenStreetMap contributors |
 
 ## Permissions
@@ -251,6 +258,7 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 - **Keep Awake** takes a power assertion on macOS, `SetThreadExecutionState` on Windows, and a logind sleep inhibitor plus the desktop's idle inhibitor (freedesktop ScreenSaver, or GNOME's session manager) on Linux. Each is released by the system when the app quits, however it quits, so a crash never leaves the computer unable to sleep. A timed session is one timer set for its end, like the countdown.
 - **Now Playing** uses AppleScript, not MediaRemote. Since macOS 15.4 the system-wide now-playing API returns nothing to apps without an Apple entitlement, so only Music and Spotify are seen.
 - **Weather** comes from Open-Meteo, which converts units server-side, so switching °C/°F refetches. Forecasts are cached for 20 minutes per place.
+- **Sports** comes from ESPN's public site API. Each kind of data is cached for as long as it can go stale: a game that's on is fetched again every 20 seconds (while the tab shows it, or it's the game picked for the closed notch), a finished day once an hour, standings every half hour. A refresh rebuilds the tab only when a score or a status actually changed, so a quiet minute doesn't lose your scroll position. Logos are fetched at 96 px through ESPN's image service, kept on disk, and set on their images in place as they arrive.
 - **Colours and glass** are painted by each head's own Border handler (`NotchSurfaceHandler`). The AppKit and GTK backends paint a Border's solid colour but leave a gradient clear, so the Mac draws gradients as a `CAGradientLayer` and Linux as a CSS `linear-gradient`. On the Mac, frosted glass is an `NSVisualEffectView` behind the Border's content, blurring behind the window, cut to the notch's shape with a mask image.
 - **Settings shows and hides rows in place.** A switch or choice that brings rows with it (the two width sliders, the hover delay, the colour pickers) changes them without rebuilding the page, so the window doesn't flash or lose its place. Every such row is drawn when the page opens and hidden right after if it isn't wanted, since the AppKit head won't draw a row first shown on a page already on screen.
 - **Text entry** lives in Settings, an ordinary window, and in the quick entry popup for tasks. The notch window is borderless and can never take keyboard focus.
@@ -264,6 +272,7 @@ rsvg-convert -w 1024 -h 1024 src/Notcho/Resources/AppIcon/appicon.svg -o src/Not
 - The mirror can only change the camera's own brightness on a USB (UVC) webcam. A MacBook's built-in camera has no setting an app can change, so there the slider brightens the mirror alone.
 - Open at login registers the app wherever it is when you switch it on. Move it to `/Applications` first, or the login item points at the old location.
 - The Processes tab lists only your own processes: other users' and the system's can't be read (or quit) without elevation. Network per process is macOS only (through `nettop`); Windows and Linux keep no per-process network counters an app can read. On Windows the disk column is all of a process's I/O, as Task Manager counts it.
+- Sports data comes from ESPN's public site API, which ESPN doesn't document or promise to keep as it is. If it changes, the Sports tab shows that it couldn't load rather than wrong scores.
 - Files can't be dragged *out* of the tray yet (the AppKit head has no drag source). Use Copy, then paste in Finder.
 
 ## Built on Shiny open source

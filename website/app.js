@@ -1,4 +1,4 @@
-/* Notcho, the browser copy. Peek, panel and HUD modes, fourteen tabs, the controls bar,
+/* Notcho, the browser copy. Peek, panel and HUD modes, fifteen tabs, the controls bar,
    the quick entry popup and Settings, plus the site's own animations at the bottom. */
 (() => {
   'use strict';
@@ -66,12 +66,13 @@
   const TABS = [
     { id: 'media', icon: 'music', name: 'Now Playing', c: '#FF375F', side: 'l' },
     { id: 'weather', icon: 'cloud-sun', name: 'Weather', c: '#64D2FF', side: 'l' },
+    { id: 'sports', icon: 'trophy', name: 'Sports', c: '#30D158', side: 'l' },
     { id: 'tray', icon: 'inbox', name: 'File Tray', c: '#30D158', side: 'l' },
     { id: 'stats', icon: 'cpu', name: 'System', c: '#BF5AF2', side: 'l' },
     { id: 'processes', icon: 'layers', name: 'Processes', c: '#5E5CE6', side: 'l' },
     { id: 'capture', icon: 'scan', name: 'Capture', c: '#0A84FF', side: 'l' },
     { id: 'mirror', icon: 'square-user', name: 'Mirror', c: '#BF5AF2', side: 'l' },
-    { id: 'notes', icon: 'audio-lines', name: 'Voice Notes', c: '#FF375F', side: 'l' },
+    { id: 'notes', icon: 'audio-lines', name: 'Voice Notes', c: '#FF375F', side: 'r' },
     { id: 'tasks', icon: 'list-checks', name: 'Tasks', c: '#30D158', side: 'r' },
     { id: 'clipboard', icon: 'clipboard-list', name: 'Clipboard', c: '#64D2FF', side: 'r' },
     { id: 'calendar', icon: 'calendar-days', name: 'Calendar', c: '#FF453A', side: 'r' },
@@ -279,6 +280,97 @@
           <div class="w-src">${w.live ? 'Live from Open-Meteo' : 'Sample forecast (live data from Open-Meteo when it can be reached)'}</div></div>`;
     },
     mount() { loadWeather(W.i); }
+  };
+
+  // ======================================================================
+  //  SPORTS
+  // ======================================================================
+  // Made-up teams with initials for logos: the app shows the real ones, from ESPN.
+  const TEAMS = {
+    SAL: { n: 'Salsa City Peppers', s: 'Peppers', c: '#ff453a', r: '14-5-2' },
+    GUA: { n: 'Guac Valley Avocados', s: 'Avocados', c: '#30d158', r: '12-6-3' },
+    QUE: { n: 'Queso Bay Melts', s: 'Melts', c: '#ffd60a', r: '11-8-1' },
+    JAL: { n: 'Jalapeño Heights', s: 'Heights', c: '#63e6a0', r: '9-9-2' },
+    CHP: { n: 'Chipotle Smoke', s: 'Smoke', c: '#ff9f0a', r: '8-10-3' },
+    TOR: { n: 'Tortilla Flats FC', s: 'Flats', c: '#e8c07a', r: '7-2-1' },
+    PIC: { n: 'Pico Harbour', s: 'Harbour', c: '#64d2ff', r: '6-3-1' },
+    CRE: { n: 'Crema Rovers', s: 'Rovers', c: '#bf5af2', r: '5-4-1' },
+    NAC: { n: 'Nacho Libre Luchadores', s: 'Luchadores', c: '#ff375f', r: '15-4' },
+    CHU: { n: 'Churro Town Twisters', s: 'Twisters', c: '#ff9f0a', r: '12-6' }
+  };
+  const SP = { filter: 'mine', page: 'scores', game: null, mine: ['SAL', 'TOR'] };
+  const SP_GAMES = [
+    { id: 1, lg: 'hockey', a: 'GUA', h: 'SAL', as: 2, hs: 3, st: 'live', clock: '3rd 6:41', tv: 'Nacho TV', per: [[1, 1, 0], [0, 2, 1]],
+      stats: [['Shots', 24, 31], ['Power Play %', 33.3, 50], ['Faceoff %', 46.2, 53.8], ['Hits', 21, 17], ['Blocked Shots', 9, 14]],
+      lead: [['Goals', 'M. Verde 2', 'R. Rojo 1'], ['Assists', 'A. Lima 1', 'D. Fuego 2']] },
+    { id: 2, lg: 'hockey', a: 'QUE', h: 'JAL', as: 4, hs: 1, st: 'final', clock: 'Final', per: [[2, 1, 1], [0, 1, 0]],
+      stats: [['Shots', 35, 22], ['Power Play %', 50, 0], ['Faceoff %', 55, 45], ['Hits', 18, 25]],
+      lead: [['Goals', 'Q. Blanco 2', 'J. Picante 1']] },
+    { id: 3, lg: 'hockey', a: 'CHP', h: 'GUA', st: 'pre', time: '7:00 PM', tv: 'Fixins+' },
+    { id: 4, lg: 'soccer', a: 'PIC', h: 'TOR', as: 1, hs: 1, st: 'live', clock: "67'", tv: 'Queso Sports', per: [[1, 0], [0, 1]],
+      stats: [['Possession %', 44, 56], ['Shots', 9, 14], ['Shots on Target', 3, 6], ['Corners', 4, 7], ['Fouls', 11, 8]],
+      lead: [['Goals', 'P. Mar 1', 'T. Maiz 1']] },
+    { id: 5, lg: 'soccer', a: 'CRE', h: 'PIC', st: 'pre', time: '2:30 PM', tv: 'Queso Sports' },
+    { id: 6, lg: 'hoops', a: 'CHU', h: 'NAC', as: 98, hs: 104, st: 'final', clock: 'Final/OT', per: [[24, 22, 27, 21, 4], [20, 30, 22, 22, 10]],
+      stats: [['Field Goal %', 44, 49], ['3-Point %', 31, 38], ['Rebounds', 41, 47], ['Assists', 22, 27], ['Turnovers', 15, 11]],
+      lead: [['Points', 'C. Azucar 31', 'N. Queso 28'], ['Rebounds', 'C. Canela 12', 'N. Libre 14']] }
+  ];
+  const SP_LEAGUES = [['hockey', 'Hockey'], ['soccer', 'Soccer'], ['hoops', 'Hoops']];
+  const SP_TABLES = {
+    hockey: { cols: ['GP', 'W', 'L', 'OTL', 'PTS'], rows: [['SAL', 21, 14, 5, 2, 30], ['GUA', 21, 12, 6, 3, 27], ['QUE', 20, 11, 8, 1, 23], ['JAL', 20, 9, 9, 2, 20], ['CHP', 21, 8, 10, 3, 19]] },
+    soccer: { cols: ['GP', 'W', 'D', 'L', 'PTS'], rows: [['TOR', 10, 7, 1, 2, 22], ['PIC', 10, 6, 1, 3, 19], ['CRE', 10, 5, 1, 4, 16]] },
+    hoops: { cols: ['W', 'L', 'PCT', 'STRK'], rows: [['NAC', 15, 4, '.789', 'W3'], ['CHU', 12, 6, '.667', 'L1']] }
+  };
+  const spLogo = (k, size = 26) => `<span class="sp-logo" style="--c:${TEAMS[k].c};--z:${size}px">${k[0]}</span>`;
+  // The state of play: a red clock while it's on, the final, or the start time and the network.
+  const spMid = g => g.st === 'live' ? `<span class="sp-live"><i></i>${esc(g.clock)}</span><small>${esc(g.tv || '')}</small>`
+    : g.st === 'final' ? `<span class="n-sec">${esc(g.clock)}</span>` : `<span>${esc(g.time)}</span><small>${esc(g.tv || '')}</small>`;
+  function spCard(g) {
+    const pre = g.st === 'pre', fin = g.st === 'final';
+    const score = (mine, other, k) => pre ? `<span class="sp-rec">${TEAMS[k].r}</span>` : `<b class="tnum${fin && mine < other ? ' lost' : ''}">${mine}</b>`;
+    const mid = spMid(g);
+    return `<button class="sp-card" type="button" data-act="spGame" data-id="${g.id}">
+      <span class="sp-team">${spLogo(g.a)}<small>${g.a}</small></span>${score(g.as, g.hs, g.a)}
+      <span class="sp-mid">${mid}</span>${score(g.hs, g.as, g.h)}<span class="sp-team">${spLogo(g.h)}<small>${g.h}</small></span></button>`;
+  }
+  function spGamePage(g) {
+    const pre = g.st === 'pre';
+    const side = k => `<span class="sp-side">${spLogo(k, 44)}<b>${TEAMS[k].s}</b><small>${TEAMS[k].r}</small></span>`;
+    const big = (m, o) => `<b class="sp-big tnum${g.st === 'final' && m < o ? ' lost' : ''}">${pre ? '' : m}</b>`;
+    let html = `<div class="sp-head" style="--c:${TEAMS[g.h].c}">${side(g.a)}${big(g.as, g.hs)}<span class="sp-mid">${spMid(g)}</span>${big(g.hs, g.as)}${side(g.h)}</div>`;
+    if (pre) return html + `<div class="n-card n-sec">Team stats show here once it starts.</div>`;
+    const labels = g.lg === 'soccer' ? ['1H', '2H'] : g.per[0].map((_, i) => g.lg === 'hockey' && i > 2 ? 'OT' : g.lg === 'hoops' && i > 3 ? 'OT' : i + 1);
+    const line = (k, p, t) => `<span>${k}</span>${p.map(v => `<span class="n-sec">${v}</span>`).join('')}<b>${t}</b>`;
+    html += `<div class="n-card sp-line" style="--n:${labels.length}"><span></span>${labels.map(l => `<span class="n-ter">${l}</span>`).join('')}<span class="n-ter">T</span>${line(g.a, g.per[0], g.as)}${line(g.h, g.per[1], g.hs)}</div>`;
+    const bars = g.stats.map(([l, a, h]) => {
+      const sh = a / (a + h) * 100;
+      return `<div class="sp-stat"><b class="${a >= h ? '' : 'n-sec'}">${a}</b><span class="n-sec">${l}</span><b class="${h >= a ? '' : 'n-sec'}">${h}</b>
+        <i style="--s:${sh}%;--a:${TEAMS[g.a].c};--h:${TEAMS[g.h].c};--ao:${a >= h ? 1 : .45};--ho:${h >= a ? 1 : .45}"></i></div>`;
+    }).join('');
+    const leads = g.lead.map(([c, a, h]) => `<div class="sp-lead"><b>${a}</b><span class="n-sec">${c}</span><b>${h}</b></div>`).join('');
+    return html + `<div class="n-card stack"><div class="sp-stats-head">${spLogo(g.a, 18)}<span class="n-cap">Team stats</span>${spLogo(g.h, 18)}</div>${bars}</div>
+      <div class="n-card stack"><div class="n-cap" style="text-align:center">Leaders</div>${leads}</div>`;
+  }
+  const sportsView = {
+    html() {
+      if (SP.page === 'game') {
+        const g = SP_GAMES.find(x => x.id === SP.game);
+        return `<div class="stack"><div class="row"><button class="n-icon" type="button" data-act="spBack" aria-label="Back">${ic('chevron-left')}</button><b>${TEAMS[g.a].s} at ${TEAMS[g.h].s}</b></div>${spGamePage(g)}</div>`;
+      }
+      const chip = (id, label, icon) => `<button class="sp-chip${SP.filter === id ? ' on' : ''}" type="button" data-act="spFilter" data-id="${id}">${icon ? ic(icon) : ''}${label}</button>`;
+      const head = `<div class="sp-top"><div class="row" style="gap:6px">${chip('mine', 'My Teams', 'star')}${SP_LEAGUES.map(([id, l]) => chip(id, l)).join('')}</div>
+        <span class="sp-seg"><button class="n-icon${SP.page === 'scores' ? ' on' : ''}" type="button" data-act="spPage" data-id="scores" aria-label="Scores">${ic('trophy')}</button><button class="n-icon${SP.page === 'standings' ? ' on' : ''}" type="button" data-act="spPage" data-id="standings" aria-label="Standings">${ic('list-ordered')}</button></span></div>`;
+      if (SP.page === 'standings') {
+        const lg = SP.filter === 'mine' ? 'hockey' : SP.filter;
+        const t = SP_TABLES[lg];
+        const rows = t.rows.map(([k, ...v], i) => `<div class="sp-row${SP.mine.includes(k) ? ' fav' : ''}" style="--n:${t.cols.length}"><span class="n-ter">${i + 1}</span>${spLogo(k, 16)}<span class="ell">${TEAMS[k].s}</span>${v.map(x => `<span>${x}</span>`).join('')}</div>`).join('');
+        return `<div class="stack">${head}<div class="n-card"><div class="sp-row n-cap" style="--n:${t.cols.length}"><span></span><span></span><span>${SP_LEAGUES.find(l => l[0] === lg)[1]}</span>${t.cols.map(c => `<span>${c}</span>`).join('')}</div>${rows}</div></div>`;
+      }
+      const games = SP_GAMES.filter(g => SP.filter === 'mine' ? SP.mine.includes(g.a) || SP.mine.includes(g.h) : g.lg === SP.filter);
+      const today = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `<div class="stack">${head}<div class="sp-day"><button class="n-icon" type="button" data-act="spDay" aria-label="Previous day">${ic('chevron-left')}</button><b>Today <span class="n-ter">${today}</span></b><button class="n-icon" type="button" data-act="spDay" aria-label="Next day">${ic('chevron-right')}</button></div>
+        <div class="sp-grid">${games.map(spCard).join('')}</div></div>`;
+    }
   };
 
   // ======================================================================
@@ -1042,7 +1134,7 @@
   };
 
   const VIEWS = {
-    media: mediaView, weather: weatherView, tray: trayView, stats: statsView, processes: procView, capture: captureView,
+    media: mediaView, weather: weatherView, sports: sportsView, tray: trayView, stats: statsView, processes: procView, capture: captureView,
     mirror: mirrorView, notes: notesView, tasks: tasksView, clipboard: clipView, calendar: calView, timer: timerView,
     awake: awakeView, calculator: calcView, prompter: prompterView
   };
@@ -1232,6 +1324,11 @@
     mPrev: () => mediaSkip(-1),
     mNext: () => mediaSkip(1),
     mScrub: (b, e) => { const r = b.getBoundingClientRect(); M.pos = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * (track().d - 1)); refresh(); },
+    spFilter: b => { SP.filter = b.dataset.id; refresh(); },
+    spPage: b => { SP.page = b.dataset.id; refresh(); },
+    spGame: b => { SP.game = Number(b.dataset.id); SP.page = 'game'; refresh(); },
+    spBack: () => { SP.page = 'scores'; refresh(); },
+    spDay: () => toast('The app steps through the days with ‹ ›', { icon: 'calendar-days' }),
     wPrev: () => { W.i = (W.i - 1 + PLACES.length) % PLACES.length; refresh(); },
     wNext: () => { W.i = (W.i + 1) % PLACES.length; refresh(); },
     wUnit: () => { S.unit = useF() ? 'c' : 'f'; store.set('unit', S.unit); refresh(); renderPeek(); },

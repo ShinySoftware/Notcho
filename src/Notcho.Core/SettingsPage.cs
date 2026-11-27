@@ -32,6 +32,9 @@ public sealed class SettingsPage : ContentPage
     // that is already on screen, so a changed list is a fresh page, and the search must survive that.
     static string searchText = "";
     static IReadOnlyList<WeatherPlace> searchResults = [];
+    static string teamSearchText = "";
+    /// <summary>Teams found by the last search; null before one, empty when it found nothing.</summary>
+    static IReadOnlyList<SportsTeam>? teamResults;
     /// <summary>Where the page being replaced was scrolled to, for the fresh one to carry on from; null once used.</summary>
     static double? keptScroll;
 
@@ -42,7 +45,7 @@ public sealed class SettingsPage : ContentPage
     /// <summary>The release the Update section was built for, so only a different one rebuilds the page.</summary>
     readonly string? shownUpdate;
 
-    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, NotchController notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator)
+    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, SportsService sports, NotchController notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator)
     {
         this.updates = updates;
         this.shownUpdate = updates.Available?.Version;
@@ -96,6 +99,8 @@ public sealed class SettingsPage : ContentPage
             sections.Add(this.WeatherSection(settings, weather));
         sections.Add(this.TemperatureSection(settings, weather));
         sections.Add(this.PlacesSection(settings, weather));
+        sections.Add(LeaguesSection(sports));
+        sections.Add(this.TeamsSection(sports));
         if (calendar.IsSupported)
             sections.Add(this.PermissionsSection(calendar));
         sections.Add(GeneralSection(startup, shell));
@@ -429,13 +434,16 @@ public sealed class SettingsPage : ContentPage
         foreach (var info in PeekItemInfo.All)
         {
             var name = info.Item.ToString();
-            section.Cells.Add(Switch(info.Name, info.Symbol, info.Color, settings.PeekItems.Contains(name), on =>
+            var cell = Switch(info.Name, info.Symbol, info.Color, settings.PeekItems.Contains(name), on =>
             {
                 var items = settings.PeekItems.Where(i => i != name).ToList();
                 if (on)
                     items.Add(name);
                 settings.PeekItems = items;
-            }));
+            });
+            if (info.Item == PeekItem.Sports)
+                cell.Description = "Pick it with Show on notch on the game's page in the Sports tab. It shows while the game is on, every 20 seconds, and comes off when it's over.";
+            section.Cells.Add(cell);
         }
         return section;
     }
@@ -640,6 +648,78 @@ public sealed class SettingsPage : ContentPage
         }
         return section;
     }
+
+    static TableSection LeaguesSection(SportsService sports)
+    {
+        var section = Section("Sports", "The leagues across the top of the Sports tab. Scores, schedules, stats, standings and logos come from ESPN.");
+        var followed = sports.Leagues.Select(l => l.Key).ToHashSet();
+        foreach (var league in SportsLeague.All)
+        {
+            var key = league.Key;
+            section.Cells.Add(Switch(league.Name, "sportscourt.fill", Ui.Green, followed.Contains(key), on => sports.SetLeagueFollowed(key, on)));
+        }
+        return section;
+    }
+
+    /// <summary>Your teams, with a search over the followed leagues to add more - as the places are added.</summary>
+    TableSection TeamsSection(SportsService sports)
+    {
+        var favourites = sports.Favourites;
+        var section = Section("My Teams", favourites.Count == 0
+            ? "No teams yet. Search the leagues you follow, or tap the star on a team's page in the notch."
+            : "Your teams' games come first, and the closed notch can show their live scores.");
+
+        foreach (var team in favourites)
+        {
+            var remove = new Button { Text = "Remove", FontSize = 12, Padding = new Thickness(10, 2), VerticalOptions = LayoutOptions.Center };
+            remove.Clicked += (_, _) =>
+            {
+                sports.ToggleFavourite(team);
+                this.Rebuild();
+            };
+            section.Cells.Add(new CustomCell { Title = team.Name, Description = SportsLeague.Find(team.League)?.Name ?? "", IconSource = TeamIcon(sports, team), IsSelectable = false, CustomContent = remove });
+        }
+
+        var search = new EntryCell { Title = "Add a team", Placeholder = "e.g. Maple Leafs", ValueText = teamSearchText, IconSource = Ui.SymbolSource("magnifyingglass", 16, Ui.Secondary) };
+        async void Search()
+        {
+            teamSearchText = search.ValueText ?? "";
+            if (teamSearchText.Trim().Length == 0)
+                return;
+            teamResults = await sports.SearchTeamsAsync(teamSearchText);
+            // Their logos, so the results show them.
+            await Task.WhenAll(teamResults.Select(t => t.Logo).OfType<string>().Select(sports.LogoAsync));
+            this.Rebuild();
+        }
+        search.Completed += (_, _) => Search();
+        section.Cells.Add(search);
+
+        if (teamResults is { Count: 0 })
+            section.Cells.Add(new LabelCell { Title = $"No team found for \"{teamSearchText}\" in the leagues you follow", IsSelectable = false, TitleColor = Ui.Secondary });
+
+        foreach (var result in (teamResults ?? []).Where(r => favourites.All(f => f.Key != r.Key)))
+        {
+            section.Cells.Add(new CommandCell
+            {
+                Title = result.Name,
+                Description = SportsLeague.Find(result.League)?.Name ?? "",
+                IconSource = TeamIcon(sports, result),
+                ShowArrow = false,
+                Command = new Command(() =>
+                {
+                    sports.ToggleFavourite(result);
+                    teamSearchText = "";
+                    teamResults = null;
+                    this.Rebuild();
+                })
+            });
+        }
+        return section;
+    }
+
+    /// <summary>The team's logo once it's been loaded, else a star.</summary>
+    static ImageSource TeamIcon(SportsService sports, SportsTeam team)
+        => team.Logo != null && sports.CachedLogo(team.Logo) is { } bytes ? SportsLogo.FromBytes(bytes) : Ui.SymbolSource("star.fill", 16, Ui.Yellow);
 
     TableSection PermissionsSection(CalendarService calendar)
     {

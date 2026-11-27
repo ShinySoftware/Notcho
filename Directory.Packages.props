@@ -6,22 +6,22 @@
 
     <ItemGroup>
         <PackageVersion Include="Microsoft.Maui.Controls" Version="11.0.10" />
-        <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.14.26573.4" />
-        <PackageVersion Include="Microsoft.Maui.DevFlow.Agent.Gtk" Version="0.1.0-preview.14.26573.4" />
-        <PackageVersion Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.15.26574.3" />
-        <PackageVersion Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.15.26574.3" />
-        <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.1.0-preview.15.26574.3" />
-        <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.1.0-preview.15.26574.3" />
+        <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.16.26575.3" />
+        <PackageVersion Include="Microsoft.Maui.DevFlow.Agent.Gtk" Version="0.1.0-preview.16.26575.3" />
+        <PackageVersion Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.16.26575.3" />
+        <PackageVersion Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.16.26575.3" />
+        <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.1.0-preview.16.26575.3" />
+        <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.1.0-preview.16.26575.3" />
         <PackageVersion Include="Microsoft.Win32.SystemEvents" Version="11.0.0" />
         <PackageVersion Include="Shiny.Audio" Version="3.0.0" />
         <PackageVersion Include="Shiny.Audio.Linux" Version="3.0.0" />
-        <PackageVersion Include="Shiny.Calendar" Version="7.1.0" />
-        <PackageVersion Include="Shiny.Core" Version="7.1.0" />
+        <PackageVersion Include="Shiny.Calendar" Version="7.2.0" />
+        <PackageVersion Include="Shiny.Core" Version="7.2.0" />
         <PackageVersion Include="Shiny.Extensions.DependencyInjection" Version="6.0.2" />
         <PackageVersion Include="Shiny.Extensions.Stores" Version="6.0.2" />
-        <PackageVersion Include="Shiny.Gps" Version="7.1.0" />
-        <PackageVersion Include="Shiny.Gps.Linux" Version="7.1.0" />
-        <PackageVersion Include="Shiny.Hosting.Maui" Version="7.1.0" />
+        <PackageVersion Include="Shiny.Gps" Version="7.2.0" />
+        <PackageVersion Include="Shiny.Gps.Linux" Version="7.2.0" />
+        <PackageVersion Include="Shiny.Hosting.Maui" Version="7.2.0" />
         <PackageVersion Include="Shiny.Maui.Controls" Version="3.0.0" />
         <PackageVersion Include="Shiny.Maui.Controls.Analysis.Barcode" Version="3.0.0" />
         <PackageVersion Include="Shiny.Maui.Controls.Camera" Version="3.0.0" />

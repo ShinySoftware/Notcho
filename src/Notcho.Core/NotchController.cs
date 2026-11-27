@@ -41,6 +41,8 @@ public sealed class NotchController
     /// <summary>How long a new song holds the panel open when nobody is hovering it.</summary>
     static readonly TimeSpan TrackChangeHold = TimeSpan.FromSeconds(4);
     static readonly TimeSpan WeatherCheckEvery = TimeSpan.FromMinutes(5);
+    /// <summary>How often a game that's on is fetched again.</summary>
+    static readonly TimeSpan SportsPollEvery = TimeSpan.FromSeconds(20);
     /// <summary>The store says when events change; this only catches the day moving on.</summary>
     static readonly TimeSpan CalendarRefreshEvery = TimeSpan.FromMinutes(15);
     /// <summary>A display change arrives as a burst of notifications; act once it settles.</summary>
@@ -65,6 +67,7 @@ public sealed class NotchController
     readonly FileTrayService tray;
     readonly TeleprompterService prompter;
     readonly WeatherService weather;
+    readonly SportsService sports;
     readonly VoiceNotesService notes;
     readonly TasksService tasks;
     readonly TaskEntry taskEntry;
@@ -103,6 +106,7 @@ public sealed class NotchController
     int screensToken;
     int previewToken;
     bool previewingSize;
+    bool sportsPolling;
     /// <summary>The display changed: an open panel is built again rather than switched in place.</summary>
     bool reseat;
     /// <summary>Whether the open panel's controls carry a play button (see <see cref="ShowIn"/>); null before any.</summary>
@@ -124,6 +128,7 @@ public sealed class NotchController
         FileTrayService tray,
         TeleprompterService prompter,
         WeatherService weather,
+        SportsService sports,
         VoiceNotesService notes,
         TasksService tasks,
         TaskEntry taskEntry,
@@ -152,6 +157,7 @@ public sealed class NotchController
         this.tray = tray;
         this.prompter = prompter;
         this.weather = weather;
+        this.sports = sports;
         this.notes = notes;
         this.tasks = tasks;
         this.taskEntry = taskEntry;
@@ -286,6 +292,13 @@ public sealed class NotchController
         };
         this.controls.ChangedExternally += (_, kind) => this.ShowHud(kind);
         this.weather.Changed += (_, _) => this.Rebuild(NotchTab.Weather);
+        this.sports.Changed += (_, _) =>
+        {
+            this.Rebuild(NotchTab.Sports);
+            // The picked game's score is in the closed notch, which the open panel hangs from.
+            this.RefreshNeck();
+            this.PollSports();
+        };
         this.tasks.Changed += (_, _) => this.Rebuild(NotchTab.Tasks);
         this.clipboard.Changed += (_, _) => this.Rebuild(NotchTab.Clipboard);
         this.calculator.Changed += (_, _) => this.Rebuild(NotchTab.Calculator);
@@ -342,6 +355,7 @@ public sealed class NotchController
         this.awake.StartIfAskedAtLaunch();
         _ = this.calendar.RefreshAsync();
         _ = this.weather.RefreshAsync();
+        _ = this.sports.RefreshAsync();
         var now = this.time.GetUtcNow();
         this.nextCalendarRefresh = now + CalendarRefreshEvery;
         this.nextWeatherCheck = now + WeatherCheckEvery;
@@ -527,6 +541,12 @@ public sealed class NotchController
         this.settings.LastTab = tab.ToString();
         if (tab == NotchTab.Weather)
             _ = this.weather.RefreshAsync();
+        // Like the calendar, coming back starts on today's scores.
+        if (tab == NotchTab.Sports)
+        {
+            this.sports.Reset();
+            _ = this.sports.RefreshAsync();
+        }
         // Coming back to the calendar starts on today, not whatever day was last picked.
         if (tab == NotchTab.Calendar && this.calendar.SelectedDate != null)
             _ = this.calendar.SelectAsync(null);
@@ -606,6 +626,7 @@ public sealed class NotchController
         this.mode = next;
         _ = this.RenderAsync();
         this.ScheduleTick();
+        this.PollSports();
     }
 
     /// <summary>
@@ -637,7 +658,7 @@ public sealed class NotchController
     };
 
     /// <summary>Everything the closed notch is built from.</summary>
-    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{String.Join(',', this.PeekButtons.Order())}|{this.PeekAwake}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}";
+    string PeekKey => $"{this.SizeKey}|{String.Join(',', this.settings.PeekItems)}|{String.Join(',', this.PeekButtons.Order())}|{this.PeekAwake}|{this.media.Current?.TrackKey}|{this.media.Current?.IsPlaying}|{this.media.Artwork?.Length}|{this.countdown.IsActive}|{this.countdown.IsPaused}|{this.calendar.StartingWithin(TimeSpan.FromMinutes(15))?.Title}|{this.weather.Selected?.Temperature:0}|{this.weather.Selected?.Code}|{this.sports.PeekKey}";
 
     /// <summary>
     /// Renders the current state. One render at a time: asking during one queues another, which renders
@@ -729,7 +750,7 @@ public sealed class NotchController
         // An empty peek vanishes into a real camera notch; the stand-in has to stay drawn.
         var keepEmpty = this.previewingSize || !this.HasHardwareCutout;
         var items = PeekItemInfo.Shown(this.settings.PeekItems);
-        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.PeekButtons, this.OnMusicButtonPressed, this.PeekAwake, this.media, this.countdown, this.calendar, this.weather, this.stats, this.time);
+        return PeekView.Create(cutout.Width, this.settings.NotchLeftWidth, this.settings.NotchRightWidth, this.settings.NotchWidthsLocked, this.PeekMinWidth, this.PeekHeight, keepEmpty, items, this.PeekButtons, this.OnMusicButtonPressed, this.PeekAwake, this.media, this.countdown, this.calendar, this.weather, this.sports, this.stats, this.time);
     }
 
     /// <summary>
@@ -777,6 +798,7 @@ public sealed class NotchController
         {
             NotchTab.Media => new MediaTab(this.media),
             NotchTab.Weather => new WeatherTab(this.weather, () => this.OpenSettings?.Invoke()),
+            NotchTab.Sports => new SportsTab(this.sports, () => this.OpenSettings?.Invoke()),
             NotchTab.Tray => this.BuildTray(),
             NotchTab.Stats => new StatsTab(this.stats),
             NotchTab.Processes => new ProcessesTab(this.processes),
@@ -924,6 +946,11 @@ public sealed class NotchController
             _ = this.weather.RefreshAsync();
         }
 
+        // Scores refresh themselves when stale; only asked while they show, or a game is picked for the
+        // closed notch. Every 20 seconds while one is on (see PollSports); the minute is plenty otherwise.
+        if (this.SportsShowing || this.sports.PinnedKey != null)
+            _ = this.sports.RefreshAsync();
+
         if (this.mode == Mode.Panel && this.tab == NotchTab.Capture)
             this.capture?.Tick();
 
@@ -933,6 +960,29 @@ public sealed class NotchController
         if (this.mode == Mode.Peek && this.Key() != this.shownKey)
             _ = this.RenderAsync();
         this.RefreshNeck();
+    }
+
+    bool SportsShowing => this.mode == Mode.Panel && this.tab == NotchTab.Sports;
+
+    /// <summary>
+    /// Every 20 seconds while a game is on - the one picked for the closed notch, or one on the Sports tab
+    /// while it's open - the scores are fetched again. One loop at a time; it ends itself once nothing is on,
+    /// and starts again when the scores, the tab or the mode change.
+    /// </summary>
+    void PollSports()
+    {
+        if (this.sportsPolling || !this.sports.NeedsPolling(this.SportsShowing))
+            return;
+
+        this.sportsPolling = true;
+        this.dispatcher.DispatchDelayed(SportsPollEvery, () =>
+        {
+            this.sportsPolling = false;
+            if (!this.sports.NeedsPolling(this.SportsShowing))
+                return;
+            _ = this.sports.RefreshAsync();
+            this.PollSports();
+        });
     }
 
     static DateTimeOffset NextMinute(DateTimeOffset now)
