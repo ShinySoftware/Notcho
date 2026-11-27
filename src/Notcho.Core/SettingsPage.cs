@@ -32,9 +32,13 @@ public sealed class SettingsPage : ContentPage
     // that is already on screen, so a changed list is a fresh page, and the search must survive that.
     static string searchText = "";
     static IReadOnlyList<WeatherPlace> searchResults = [];
-    static string teamSearchText = "";
-    /// <summary>Teams found by the last search; null before one, empty when it found nothing.</summary>
-    static IReadOnlyList<SportsTeam>? teamResults;
+    /// <summary>The category showing; kept across rebuilds, so a change in it doesn't jump to another.</summary>
+    static SettingsCategory category = SettingsCategory.General;
+    /// <summary>What the RSS box last typed, and why it couldn't be added; null when it was.</summary>
+    static string rssText = "";
+    static string? rssError;
+    /// <summary>What the last backup or restore did, said under the Backup section's buttons.</summary>
+    static string? backupStatus;
     /// <summary>Where the page being replaced was scrolled to, for the fresh one to carry on from; null once used.</summary>
     static double? keptScroll;
 
@@ -44,15 +48,17 @@ public sealed class SettingsPage : ContentPage
     readonly UpdateService updates;
     /// <summary>The release the Update section was built for, so only a different one rebuilds the page.</summary>
     readonly string? shownUpdate;
+    /// <summary>The page's table, under the header: what Rebuild reads the scroll position from.</summary>
+    readonly TableView table;
 
-    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, SportsService sports, NotchController notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator)
+    public SettingsPage(AppSettings settings, CalendarService calendar, WeatherService weather, SportsService sports, NewsService news, RssService rss, NotchController notch, IPlatformShell shell, IAppStartupInstaller startup, UpdateService updates, TeleprompterService prompter, CalculatorService calculator, IFileDialogs dialogs, TimeProvider time)
     {
         this.updates = updates;
         this.shownUpdate = updates.Available?.Version;
         this.Title = "Notcho";
         this.BackgroundColor = Ui.Surface;
 
-        var table = new TableView
+        var table = this.table = new TableView
         {
             BackgroundColor = Ui.Surface,
             CellBackgroundColor = Ui.Raised,
@@ -80,34 +86,64 @@ public sealed class SettingsPage : ContentPage
         if (table.Content is ScrollView { Content: Layout rows })
             rows.Padding = new Thickness(16, 0, 16, 16);
 
+        // Only the chosen category's sections: the whole lot made one very long page.
         var sections = table.Root.Sections;
-        // A pending update comes first, and takes the page's intro as its header.
-        if (UpdateSection(updates) is { } update)
-            sections.Add(update);
-        sections.Add(this.NotchSection(settings));
-        sections.Add(this.FillSection(settings, closed: true));
-        sections.Add(this.FillSection(settings, closed: false));
-        sections[0].HeaderView = Intro(sections[0].Title);
-        sections.Add(StandInSection(settings));
-        sections.Add(PeekSection(settings));
-        sections.Add(TabsSection(settings, notch.AvailableTabs));
-        sections.Add(this.TeleprompterSection(settings, prompter));
-        sections.Add(CalculatorSection(settings, calculator));
-        sections.Add(KeepAwakeSection(settings));
-        // Nothing to ask for where the platform can't locate: the places are the whole story.
-        if (!weather.IsLocationUnavailable)
-            sections.Add(this.WeatherSection(settings, weather));
-        sections.Add(this.TemperatureSection(settings, weather));
-        sections.Add(this.PlacesSection(settings, weather));
-        sections.Add(LeaguesSection(sports));
-        sections.Add(this.TeamsSection(sports));
-        if (calendar.IsSupported)
-            sections.Add(this.PermissionsSection(calendar));
-        sections.Add(GeneralSection(startup, shell));
-        sections.Add(AboutSection(shell, updates));
+        switch (category)
+        {
+            case SettingsCategory.General:
+                // A pending update comes first.
+                if (UpdateSection(updates) is { } update)
+                    sections.Add(update);
+                sections.Add(GeneralSection(startup, shell));
+                if (calendar.IsSupported)
+                    sections.Add(this.PermissionsSection(calendar));
+                sections.Add(this.BackupSection(settings, dialogs, time));
+                break;
+            case SettingsCategory.Notch:
+                sections.Add(this.NotchSection(settings));
+                sections.Add(this.FillSection(settings, closed: true));
+                sections.Add(this.FillSection(settings, closed: false));
+                sections.Add(StandInSection(settings));
+                sections.Add(PeekSection(settings));
+                break;
+            case SettingsCategory.Tabs:
+                sections.Add(TabsSection(settings, notch.AvailableTabs));
+                sections.Add(this.TeleprompterSection(settings, prompter));
+                sections.Add(CalculatorSection(settings, calculator));
+                sections.Add(KeepAwakeSection(settings));
+                break;
+            case SettingsCategory.Weather:
+                // Nothing to ask for where the platform can't locate: the places are the whole story.
+                if (!weather.IsLocationUnavailable)
+                    sections.Add(this.WeatherSection(settings, weather));
+                sections.Add(this.TemperatureSection(settings, weather));
+                sections.Add(this.PlacesSection(settings, weather));
+                break;
+            case SettingsCategory.Sports:
+                // Teams first, so the team box is near the top of the window (see TeamsSection).
+                sections.Add(this.TeamsSection(sports));
+                sections.Add(LeaguesSection(sports));
+                break;
+            case SettingsCategory.News:
+                sections.Add(NewsNetworksSection(settings, news));
+                sections.Add(NewsCategoriesSection(settings, news));
+                sections.Add(this.RssSection(rss));
+                break;
+            default:
+                sections.Add(AboutSection(shell, updates));
+                break;
+        }
 
-        // The table is the page's one scroller.
-        this.Content = table;
+        // The header stays put; the table under it is the page's one scroller.
+        this.Content = new Grid
+        {
+            RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)],
+            Children =
+            {
+                this.Header(updates.Available != null),
+                table.At(row: 1)
+            }
+        };
         // The table renders its rows on the dispatcher, after the page has loaded (the window is made
         // hidden at startup). The AppKit head sizes the scroller from the first layout and doesn't grow it
         // when the rows arrive, so everything past the first few sections was cut off. Measuring again
@@ -651,23 +687,52 @@ public sealed class SettingsPage : ContentPage
 
     static TableSection LeaguesSection(SportsService sports)
     {
-        var section = Section("Sports", "The leagues across the top of the Sports tab. Scores, schedules, stats, standings and logos come from ESPN.");
+        var section = Section("Leagues", "The leagues across the top of the Sports tab. Scores, schedules, stats, standings and logos come from ESPN.");
         var followed = sports.Leagues.Select(l => l.Key).ToHashSet();
         foreach (var league in SportsLeague.All)
         {
             var key = league.Key;
-            section.Cells.Add(Switch(league.Name, "sportscourt.fill", Ui.Green, followed.Contains(key), on => sports.SetLeagueFollowed(key, on)));
+            var cell = Switch(league.Name, "sportscourt.fill", Ui.Green, followed.Contains(key), on => sports.SetLeagueFollowed(key, on));
+            SetLogoIcon(sports, league.Logo, cell);
+            section.Cells.Add(cell);
         }
         return section;
     }
 
-    /// <summary>Your teams, with a search over the followed leagues to add more - as the places are added.</summary>
+    /// <summary>
+    /// A league's or team's logo on its row: straight away when it's loaded, otherwise set on the row in
+    /// place when it arrives, so the page isn't built again once per logo. The row's own symbol stays if
+    /// it can't be had.
+    /// </summary>
+    static async void SetLogoIcon(SportsService sports, string? url, CellBase cell)
+    {
+        if (url == null)
+            return;
+        var cached = sports.CachedLogo(url);
+        if (cached != null)
+        {
+            cell.IconSource = SportsLogo.FromBytes(cached);
+            return;
+        }
+        var bytes = await sports.LogoAsync(url);
+        if (bytes != null)
+            cell.IconSource = SportsLogo.FromBytes(bytes);
+    }
+
+    /// <summary>
+    /// Your teams, then a box that suggests teams from the followed leagues as you type. A team is only
+    /// ever added by picking a suggestion, so what's typed can't become a team ESPN doesn't know.
+    /// </summary>
     TableSection TeamsSection(SportsService sports)
     {
         var favourites = sports.Favourites;
         var section = Section("My Teams", favourites.Count == 0
-            ? "No teams yet. Search the leagues you follow, or tap the star on a team's page in the notch."
+            ? "No teams yet. Start typing a team from a league you follow and pick it from the list, or tap the star on a team's page in the notch."
             : "Your teams' games come first, and the closed notch can show their live scores.");
+
+        // The box first, above the teams: its suggestions open below it and don't flip up when the window
+        // runs out, so it has to sit high in the window however many teams there are.
+        this.AddTeamPicker(section, sports, favourites);
 
         foreach (var team in favourites)
         {
@@ -677,49 +742,299 @@ public sealed class SettingsPage : ContentPage
                 sports.ToggleFavourite(team);
                 this.Rebuild();
             };
-            section.Cells.Add(new CustomCell { Title = team.Name, Description = SportsLeague.Find(team.League)?.Name ?? "", IconSource = TeamIcon(sports, team), IsSelectable = false, CustomContent = remove });
-        }
-
-        var search = new EntryCell { Title = "Add a team", Placeholder = "e.g. Maple Leafs", ValueText = teamSearchText, IconSource = Ui.SymbolSource("magnifyingglass", 16, Ui.Secondary) };
-        async void Search()
-        {
-            teamSearchText = search.ValueText ?? "";
-            if (teamSearchText.Trim().Length == 0)
-                return;
-            teamResults = await sports.SearchTeamsAsync(teamSearchText);
-            // Their logos, so the results show them.
-            await Task.WhenAll(teamResults.Select(t => t.Logo).OfType<string>().Select(sports.LogoAsync));
-            this.Rebuild();
-        }
-        search.Completed += (_, _) => Search();
-        section.Cells.Add(search);
-
-        if (teamResults is { Count: 0 })
-            section.Cells.Add(new LabelCell { Title = $"No team found for \"{teamSearchText}\" in the leagues you follow", IsSelectable = false, TitleColor = Ui.Secondary });
-
-        foreach (var result in (teamResults ?? []).Where(r => favourites.All(f => f.Key != r.Key)))
-        {
-            section.Cells.Add(new CommandCell
-            {
-                Title = result.Name,
-                Description = SportsLeague.Find(result.League)?.Name ?? "",
-                IconSource = TeamIcon(sports, result),
-                ShowArrow = false,
-                Command = new Command(() =>
-                {
-                    sports.ToggleFavourite(result);
-                    teamSearchText = "";
-                    teamResults = null;
-                    this.Rebuild();
-                })
-            });
+            var cell = new CustomCell { Title = team.Name, Description = SportsLeague.Find(team.League)?.Name ?? "", IconSource = Ui.SymbolSource("star.fill", 16, Ui.Yellow), IsSelectable = false, CustomContent = remove };
+            SetLogoIcon(sports, team.Logo, cell);
+            section.Cells.Add(cell);
         }
         return section;
     }
 
-    /// <summary>The team's logo once it's been loaded, else a star.</summary>
-    static ImageSource TeamIcon(SportsService sports, SportsTeam team)
-        => team.Logo != null && sports.CachedLogo(team.Logo) is { } bytes ? SportsLogo.FromBytes(bytes) : Ui.SymbolSource("star.fill", 16, Ui.Yellow);
+    /// <summary>Suggestion rows under the team box: enough to find a team, few enough to stay in view.</summary>
+    const int TeamSuggestions = 6;
+
+    /// <summary>
+    /// The add-a-team box and its suggestions: teams from the followed leagues matching what's typed,
+    /// each with its logo and league, the teams already yours left out. A click on one adds it, and so
+    /// does Return for the first; typed text on its own never becomes a team.
+    /// </summary>
+    /// <remarks>
+    /// The suggestions are rows of the table, not a list floating over it: a floating list closed as the
+    /// box lost focus to the click meant for it, and ran off the bottom of the window. The rows are all
+    /// built now and shown or hidden in place, since the AppKit head never draws rows added to a page
+    /// already on screen (see <see cref="Optional"/>).
+    /// </remarks>
+    void AddTeamPicker(TableSection section, SportsService sports, IReadOnlyList<SportsTeam> favourites)
+    {
+        // The leagues' team lists, fetched now so the first letters typed have something to search.
+        _ = sports.PreloadTeamsAsync();
+
+        var box = new Entry
+        {
+            AutomationId = "TeamPicker",
+            BackgroundColor = Colors.Transparent,
+            Placeholder = "Add a team, e.g. Maple Leafs",
+            PlaceholderColor = Ui.Secondary,
+            TextColor = Ui.Text,
+            FontSize = 13,
+            VerticalOptions = LayoutOptions.Center
+        };
+        section.Cells.Add(new CustomCell
+        {
+            UseFullSize = true,
+            IsSelectable = false,
+            CustomContent = new Grid
+            {
+                ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
+                ColumnSpacing = 10,
+                Padding = new Thickness(14, 8),
+                Children =
+                {
+                    new Image { Source = Ui.SymbolSource("magnifyingglass", 16, Ui.Secondary), WidthRequest = 18, HeightRequest = 18, VerticalOptions = LayoutOptions.Center },
+                    box.At(column: 1)
+                }
+            }
+        });
+
+        // Adds, never toggles, and only once per page: on the AppKit head the box sends Completed when it
+        // loses focus to the click on a suggestion, so a click arrives as two picks, and a toggle undid
+        // the first with the second.
+        var picked = false;
+        void Pick(SportsTeam team)
+        {
+            if (picked)
+                return;
+            picked = true;
+            if (!sports.IsFavourite(team))
+                sports.ToggleFavourite(team);
+            this.Rebuild();
+        }
+
+        var shown = new SportsTeam?[TeamSuggestions];
+        var rows = new CommandCell[TeamSuggestions];
+        var show = new Action<bool>[TeamSuggestions];
+        for (var i = 0; i < TeamSuggestions; i++)
+        {
+            var index = i;
+            rows[i] = new CommandCell
+            {
+                ShowArrow = false,
+                IconSource = Ui.SymbolSource("plus.circle.fill", 16, Ui.Green),
+                Command = new Command(() =>
+                {
+                    if (shown[index] is { } team)
+                        Pick(team);
+                })
+            };
+            show[i] = Optional(rows[i], false);
+            section.Cells.Add(rows[i]);
+        }
+
+        var none = new LabelCell { IsSelectable = false, TitleColor = Ui.Secondary };
+        var showNone = Optional(none, false);
+        section.Cells.Add(none);
+
+        var searches = 0;
+        async void Search(string text)
+        {
+            var search = ++searches;
+            var found = text.Trim().Length == 0 ? [] : await sports.SearchTeamsAsync(text);
+            // Typing moved on while this one was out.
+            if (search != searches)
+                return;
+
+            var teams = found.Where(t => favourites.All(f => f.Key != t.Key)).Take(TeamSuggestions).ToList();
+            for (var i = 0; i < TeamSuggestions; i++)
+            {
+                var index = i;
+                var team = index < teams.Count ? teams[index] : null;
+                shown[index] = team;
+                show[index](team != null);
+                if (team != null)
+                {
+                    rows[index].Title = team.Name;
+                    rows[index].Description = SportsLeague.Find(team.League)?.Name ?? "";
+                    SetSuggestionLogo(sports, rows[index], team, () => shown[index]);
+                }
+            }
+            none.Title = $"No team called \"{text.Trim()}\" in the leagues you follow";
+            showNone(text.Trim().Length > 0 && teams.Count == 0);
+        }
+
+        var edits = 0;
+        box.TextChanged += (_, e) =>
+        {
+            var edit = ++edits;
+            var text = e.NewTextValue ?? "";
+            this.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(150), () =>
+            {
+                if (edit == edits)
+                    Search(text);
+            });
+        };
+        // Return adds the first suggestion - after a moment, because the same Completed also arrives when a
+        // click on a suggestion takes the focus, and the team clicked must win over the first.
+        box.Completed += (_, _) => this.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(350), () =>
+        {
+            if (shown[0] is { } first)
+                Pick(first);
+        });
+    }
+
+    /// <summary>
+    /// A suggestion's logo, set on its row when it arrives - unless typing has since put another team in
+    /// that row, whose own logo is on its way.
+    /// </summary>
+    static async void SetSuggestionLogo(SportsService sports, CellBase row, SportsTeam team, Func<SportsTeam?> current)
+    {
+        var placeholder = Ui.SymbolSource("plus.circle.fill", 16, Ui.Green);
+        if (team.Logo == null)
+        {
+            row.IconSource = placeholder;
+            return;
+        }
+        if (sports.CachedLogo(team.Logo) is { } cached)
+        {
+            row.IconSource = SportsLogo.FromBytes(cached);
+            return;
+        }
+        row.IconSource = placeholder;
+        var bytes = await sports.LogoAsync(team.Logo);
+        if (bytes != null && current()?.Key == team.Key)
+            row.IconSource = SportsLogo.FromBytes(bytes);
+    }
+
+    static TableSection NewsNetworksSection(AppSettings settings, NewsService news)
+    {
+        var section = Section("News networks", "Where the News tab's headlines come from. A click opens the story on the network's own site.");
+        var chosen = settings.NewsNetworks;
+        foreach (var network in NewsNetwork.All)
+        {
+            var key = network.Key;
+            var color = Color.FromArgb(network.Color);
+            var tint = color.GetLuminosity() < 0.5f ? color.WithLuminosity(0.6f) : color;
+            var cell = Switch(network.Name, "newspaper.fill", tint, chosen.Contains(key), on => news.SetNetwork(key, on));
+            var covers = String.Join(", ", NewsCategory.All.Where(c => network.Feeds.ContainsKey(c.Key)).Select(c => c.Name));
+            cell.Description = network.Note == null ? covers : $"{covers}. {network.Note}";
+            section.Cells.Add(cell);
+        }
+        return section;
+    }
+
+    static TableSection NewsCategoriesSection(AppSettings settings, NewsService news)
+    {
+        var section = Section("News categories", "A chip on the News tab for each, with that category's stories from every network above that covers it.");
+        var chosen = settings.NewsCategories;
+        foreach (var newsCategory in NewsCategory.All)
+        {
+            var key = newsCategory.Key;
+            section.Cells.Add(Switch(newsCategory.Name, "list.bullet", Ui.Red, chosen.Contains(key), on => news.SetCategory(key, on)));
+        }
+        return section;
+    }
+
+    /// <summary>The RSS tab's feeds, each removable, and a box to add another by its address or its site's.</summary>
+    TableSection RssSection(RssService rss)
+    {
+        var feeds = rss.Feeds;
+        var section = Section("RSS feeds", feeds.Count == 0
+            ? "No feeds yet. Paste a feed's address, or just a site's, and press Return: Notcho finds the feed a site advertises."
+            : "Each feed is a chip on the RSS tab, after All.");
+
+        foreach (var feed in feeds)
+        {
+            var remove = new Button { Text = "Remove", FontSize = 12, Padding = new Thickness(10, 2), VerticalOptions = LayoutOptions.Center };
+            remove.Clicked += (_, _) =>
+            {
+                rss.Remove(feed.Url);
+                this.Rebuild();
+            };
+            var host = Uri.TryCreate(feed.Url, UriKind.Absolute, out var uri) ? uri.Host : feed.Url;
+            section.Cells.Add(new CustomCell { Title = feed.Title, Description = host, IconSource = Ui.SymbolSource("dot.radiowaves.up.forward", 16, Ui.Orange), IsSelectable = false, CustomContent = remove });
+        }
+
+        var add = new EntryCell { Title = "Add a feed", Placeholder = "e.g. daringfireball.net", ValueText = rssText, IconSource = Ui.SymbolSource("link", 16, Ui.Secondary) };
+        async void Add()
+        {
+            rssText = add.ValueText ?? "";
+            if (rssText.Trim().Length == 0)
+                return;
+            add.Description = "Looking for a feed…";
+            rssError = await rss.AddAsync(rssText);
+            if (rssError == null)
+                rssText = "";
+            this.Rebuild();
+        }
+        add.Completed += (_, _) => Add();
+        section.Cells.Add(add);
+
+        if (rssError != null)
+            section.Cells.Add(new LabelCell { Title = rssError, IsSelectable = false, TitleColor = Ui.Orange });
+        return section;
+    }
+
+    /// <summary>
+    /// Back up your settings to a file wherever you choose, and restore from one. A restore checks the
+    /// whole file first (see <see cref="AppSettings.Verify"/>), and changes nothing unless it all passes.
+    /// </summary>
+    TableSection BackupSection(AppSettings settings, IFileDialogs dialogs, TimeProvider time)
+    {
+        var section = Section("Backup & Restore", "Save your settings to a file, or put them back from one: on another computer too. A file is checked before anything changes, and one that's damaged or edited is turned away. Your tasks, clipboard history and tray files aren't included.");
+
+        section.Cells.Add(Button("Back Up to File…", async () =>
+        {
+            var now = time.GetLocalNow();
+            var path = await dialogs.SaveAsync("Back Up Notcho Settings", $"Notcho Settings {now:yyyy-MM-dd}.json");
+            if (path == null)
+                return;
+            try
+            {
+                await File.WriteAllTextAsync(path, settings.Export(now));
+                backupStatus = $"Backed up to {Path.GetFileName(path)}.";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                backupStatus = $"Couldn't save the backup: {ex.Message}";
+            }
+            this.Rebuild();
+        }));
+
+        section.Cells.Add(Button("Restore from File…", async () =>
+        {
+            var path = await dialogs.OpenAsync("Restore Notcho Settings");
+            if (path == null)
+                return;
+            backupStatus = await RestoreAsync(settings, path);
+            this.Rebuild();
+        }));
+
+        if (backupStatus != null)
+            section.Cells.Add(new LabelCell { Title = backupStatus, IsSelectable = false, TitleColor = Ui.Secondary });
+        return section;
+    }
+
+    /// <summary>Verifies the file, and only then restores it. What happened, to show under the buttons.</summary>
+    static async Task<string> RestoreAsync(AppSettings settings, string path)
+    {
+        var name = Path.GetFileName(path);
+        try
+        {
+            if (new FileInfo(path).Length > AppSettings.MaxBackupBytes)
+                return $"Didn't restore {name}: it's far too big to be a Notcho settings backup.";
+            var backup = settings.Verify(await File.ReadAllTextAsync(path));
+            var count = settings.Restore(backup);
+            var made = backup.Created is { } created ? $" (backed up {created.LocalDateTime:g})" : "";
+            var skipped = backup.Unknown > 0 ? $" {backup.Unknown} from a newer version of Notcho were left out." : "";
+            return $"Restored {count} settings from {name}{made}.{skipped}";
+        }
+        catch (FormatException ex)
+        {
+            return $"Didn't restore {name}. {ex.Message} Nothing was changed.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"Couldn't read {name}: {ex.Message}";
+        }
+    }
 
     TableSection PermissionsSection(CalendarService calendar)
     {
@@ -808,7 +1123,7 @@ public sealed class SettingsPage : ContentPage
     void OnUpdatesChanged(object? sender, EventArgs e)
     {
         if (this.updates.Available?.Version != this.shownUpdate)
-            this.Dispatcher.Dispatch(this.Rebuild);
+            this.Dispatcher.Dispatch(() => this.Rebuild());
     }
 
     /// <summary>
@@ -935,37 +1250,65 @@ public sealed class SettingsPage : ContentPage
     static ImageSource AppIcon() => ImageSource.FromStream(() => typeof(SettingsPage).Assembly.GetManifestResourceStream("Notcho.AppIcon.png")!);
 
     /// <summary>The icon beside the name and slogan, then a line on getting about, then the first section's heading.</summary>
-    static View Intro(string heading)
+    /// <summary>
+    /// The logo and name, and a chip per category under them. Outside the table, so it stays at the top
+    /// while the category's settings scroll beneath it.
+    /// </summary>
+    /// <param name="updatePending">General gets a dot while a new version waits there.</param>
+    View Header(bool updatePending)
     {
         var top = new Grid
         {
             ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star)],
-            ColumnSpacing = 14
+            ColumnSpacing = 12
         };
-        top.Children.Add(new Image { Source = AppIcon(), WidthRequest = 76, HeightRequest = 76, VerticalOptions = LayoutOptions.Center }.At(column: 0));
+        top.Children.Add(new Image { Source = AppIcon(), WidthRequest = 56, HeightRequest = 56, VerticalOptions = LayoutOptions.Center }.At(column: 0));
         top.Children.Add(new VerticalStackLayout
         {
             Spacing = 2,
             VerticalOptions = LayoutOptions.Center,
             Children =
             {
-                new Label { Text = "Notcho", FontSize = 28, FontAttributes = FontAttributes.Bold, TextColor = Ui.Text },
-                new Label { Text = "Notcho Notcho Man! We got all the fixins.", FontSize = 13, FontAttributes = FontAttributes.Bold | FontAttributes.Italic, TextColor = Ui.Orange }
+                new Label { Text = "Notcho", FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = Ui.Text },
+                new Label { Text = "Notcho Notcho Man! We got all the fixins.", FontSize = 12, FontAttributes = FontAttributes.Bold | FontAttributes.Italic, TextColor = Ui.Orange }
             }
         }.At(column: 1));
 
+        var chips = new HorizontalStackLayout { Spacing = 6 };
+        foreach (var info in CategoryInfo)
+        {
+            var next = info.Category;
+            var name = next == SettingsCategory.General && updatePending ? info.Name + " •" : info.Name;
+            // Its AutomationId is its text (see Ui.Chip), which UI tests find it by.
+            chips.Children.Add(Ui.Chip(name, () => this.ShowCategory(next), next == category));
+        }
+
         return new VerticalStackLayout
         {
-            Spacing = 4,
-            Padding = new Thickness(4, 20, 4, 14),
+            Spacing = 14,
+            Padding = new Thickness(20, 18, 20, 10),
+            BackgroundColor = Ui.Surface,
             Children =
             {
                 top,
-                new Label { Text = "Hover the notch to open it, or click it if you'd rather. Drop files on it to keep them in the tray.", FontSize = 12, TextColor = Ui.Secondary, Margin = new Thickness(0, 12, 0, 0) },
-                new Label { Text = heading, FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Ui.Secondary, Margin = new Thickness(0, 18, 0, 0) }
+                // A plain row, not a sideways scroller: on the AppKit head that measured short and the
+                // table drew over the chips. Seven words fit across the window.
+                chips,
+                new BoxView { HeightRequest = 1, Color = Ui.Separator, Margin = new Thickness(-20, 2, -20, 0) }
             }
         };
     }
+
+    static readonly (SettingsCategory Category, string Name)[] CategoryInfo =
+    [
+        (SettingsCategory.General, "General"),
+        (SettingsCategory.Notch, "Notch"),
+        (SettingsCategory.Tabs, "Tabs"),
+        (SettingsCategory.Weather, "Weather"),
+        (SettingsCategory.Sports, "Sports"),
+        (SettingsCategory.News, "News"),
+        (SettingsCategory.About, "About")
+    ];
 
     static TableSection Section(string title, string? footer)
     {
@@ -1072,13 +1415,36 @@ public sealed class SettingsPage : ContentPage
         };
     }
 
-    void Rebuild()
+    /// <summary>Shows another category: a fresh page, from the top.</summary>
+    void ShowCategory(SettingsCategory next)
+    {
+        if (next == category)
+            return;
+        category = next;
+        this.Rebuild(keepScroll: false);
+    }
+
+    /// <param name="keepScroll">The fresh page carries on from where this one was scrolled to.</param>
+    void Rebuild(bool keepScroll = true)
     {
         // The fresh page reads the script from settings, so an edit still in its debounce goes there first.
         this.flushScript?.Invoke();
-        if (this.Content is TableView { Content: ScrollView scroller })
+        keptScroll = null;
+        if (keepScroll && this.table.Content is ScrollView scroller)
             keptScroll = scroller.ScrollY;
         if (this.Window is { } window && IPlatformApplication.Current?.Services.GetService<SettingsPage>() is { } fresh)
             window.Page = fresh;
     }
+}
+
+/// <summary>The groups Settings is split into, a chip each under the header.</summary>
+enum SettingsCategory
+{
+    General,
+    Notch,
+    Tabs,
+    Weather,
+    Sports,
+    News,
+    About
 }

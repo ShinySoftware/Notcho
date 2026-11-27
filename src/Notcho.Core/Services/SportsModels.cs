@@ -3,7 +3,11 @@ namespace Notcho.Services;
 /// <summary>A league the Sports tab can follow, by its ESPN path ("hockey/nhl").</summary>
 /// <param name="Key">ESPN's sport and league, as they appear in its URLs.</param>
 /// <param name="Short">What the league chip says.</param>
-public sealed record SportsLeague(string Key, string Name, string Short)
+/// <param name="Logo">
+/// ESPN's logo for dark backgrounds (what its scoreboards name), known up front so a league's chip shows
+/// it before any of the league's scores have been fetched.
+/// </param>
+public sealed record SportsLeague(string Key, string Name, string Short, string Logo)
 {
     public string Sport => this.Key.Split('/')[0];
 
@@ -12,22 +16,22 @@ public sealed record SportsLeague(string Key, string Name, string Short)
     /// <summary>Every league on offer, in Settings' order. Team sports only: ESPN's racing, golf and tennis have no home and away.</summary>
     public static readonly IReadOnlyList<SportsLeague> All =
     [
-        new("football/nfl", "NFL", "NFL"),
-        new("basketball/nba", "NBA", "NBA"),
-        new("baseball/mlb", "MLB", "MLB"),
-        new("hockey/nhl", "NHL", "NHL"),
-        new("basketball/wnba", "WNBA", "WNBA"),
-        new("soccer/usa.1", "MLS", "MLS"),
-        new("soccer/usa.nwsl", "NWSL", "NWSL"),
-        new("soccer/eng.1", "Premier League", "EPL"),
-        new("soccer/esp.1", "LaLiga", "LaLiga"),
-        new("soccer/ger.1", "Bundesliga", "BUN"),
-        new("soccer/ita.1", "Serie A", "Serie A"),
-        new("soccer/fra.1", "Ligue 1", "Ligue 1"),
-        new("soccer/uefa.champions", "UEFA Champions League", "UCL"),
-        new("football/college-football", "College Football", "NCAAF"),
-        new("basketball/mens-college-basketball", "Men's College Basketball", "NCAAM"),
-        new("basketball/womens-college-basketball", "Women's College Basketball", "NCAAW")
+        new("football/nfl", "NFL", "NFL", "https://a.espncdn.com/i/teamlogos/leagues/500-dark/nfl.png"),
+        new("basketball/nba", "NBA", "NBA", "https://a.espncdn.com/i/teamlogos/leagues/500-dark/nba.png"),
+        new("baseball/mlb", "MLB", "MLB", "https://a.espncdn.com/i/teamlogos/leagues/500-dark/mlb.png"),
+        new("hockey/nhl", "NHL", "NHL", "https://a.espncdn.com/i/teamlogos/leagues/500-dark/nhl.png"),
+        new("basketball/wnba", "WNBA", "WNBA", "https://a.espncdn.com/i/teamlogos/leagues/500-dark/wnba.png"),
+        new("soccer/usa.1", "MLS", "MLS", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/19.png"),
+        new("soccer/usa.nwsl", "NWSL", "NWSL", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/2323.png"),
+        new("soccer/eng.1", "Premier League", "EPL", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/23.png"),
+        new("soccer/esp.1", "LaLiga", "LaLiga", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/15.png"),
+        new("soccer/ger.1", "Bundesliga", "BUN", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/10.png"),
+        new("soccer/ita.1", "Serie A", "Serie A", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/12.png"),
+        new("soccer/fra.1", "Ligue 1", "Ligue 1", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/9.png"),
+        new("soccer/uefa.champions", "UEFA Champions League", "UCL", "https://a.espncdn.com/i/leaguelogos/soccer/500-dark/2.png"),
+        new("football/college-football", "College Football", "NCAAF", "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_Football.png"),
+        new("basketball/mens-college-basketball", "Men's College Basketball", "NCAAM", "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_MensBasketball.png"),
+        new("basketball/womens-college-basketball", "Women's College Basketball", "NCAAW", "https://a.espncdn.com/redesign/assets/img/icons/NCAASports_WomensBasketball.png")
     ];
 
     /// <summary>Followed until changed in Settings.</summary>
@@ -101,7 +105,7 @@ public sealed record TeamSchedule(SportsTeam Team, string? Record, IReadOnlyList
 
 /// <summary>A league's games on a day.</summary>
 /// <param name="Failed">ESPN couldn't be reached: retried sooner than a good answer would be.</param>
-public sealed record Scoreboard(string League, DateTime Day, IReadOnlyList<SportsGame> Games, string? Logo, DateTime FetchedUtc, bool Failed = false);
+public sealed record Scoreboard(string League, DateTime Day, IReadOnlyList<SportsGame> Games, DateTime FetchedUtc, bool Failed = false);
 
 /// <summary>Where the Sports tab is.</summary>
 public enum SportsPage

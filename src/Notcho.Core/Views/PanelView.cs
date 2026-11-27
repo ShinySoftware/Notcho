@@ -8,6 +8,8 @@ public enum NotchTab
     Media,
     Weather,
     Sports,
+    News,
+    Rss,
     Tray,
     Stats,
     Processes,
@@ -32,6 +34,8 @@ public sealed record NotchTabInfo(NotchTab Tab, string Symbol, string Name)
         new(NotchTab.Media, "music.note", "Now Playing"),
         new(NotchTab.Weather, "cloud.sun.fill", "Weather"),
         new(NotchTab.Sports, "sportscourt.fill", "Sports"),
+        new(NotchTab.News, "newspaper.fill", "News"),
+        new(NotchTab.Rss, "dot.radiowaves.up.forward", "RSS"),
         new(NotchTab.Tray, "tray.and.arrow.down.fill", "File Tray"),
         new(NotchTab.Stats, "cpu", "System"),
         new(NotchTab.Processes, "list.bullet.rectangle", "Processes"),
@@ -169,7 +173,7 @@ sealed class PanelView : Grid, ILiveView, IDisposable
             return pill.Pressable(() => this.select(t.Tab));
         }
 
-        // No spacing: up to eighteen buttons have to fit across.
+        // No spacing: up to eighteen buttons have to fit across (twenty, with every tab on).
         var left = new HorizontalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Center };
         foreach (var t in tabs)
         {

@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Shiny;
 using Shiny.Extensions.Stores;
 
@@ -396,6 +399,45 @@ public sealed class AppSettings
 
     static string? NullIfEmpty(string s) => s.Length == 0 ? null : s;
 
+    /// <summary>The news networks the News tab reads, by key ("cbc"), in Settings' order.</summary>
+    public IReadOnlyList<string> NewsNetworks
+    {
+        get => this.List(nameof(this.NewsNetworks)) ?? NewsNetwork.Defaults;
+        set => this.Set(nameof(this.NewsNetworks), value.Distinct().ToArray());
+    }
+
+    /// <summary>The categories the News tab has a chip for, by key ("world").</summary>
+    public IReadOnlyList<string> NewsCategories
+    {
+        get => this.List(nameof(this.NewsCategories)) ?? NewsCategory.Defaults;
+        set => this.Set(nameof(this.NewsCategories), value.Distinct().ToArray());
+    }
+
+    /// <summary>The News tab's chip: a category's key.</summary>
+    public string? NewsFilter
+    {
+        get => this.Text(nameof(this.NewsFilter));
+        set => this.Set(nameof(this.NewsFilter), value ?? "", notify: false);
+    }
+
+    /// <summary>The RSS tab's feeds. Stored as "url|title" strings, in the order they were added.</summary>
+    public IReadOnlyList<RssFeed> RssFeeds
+    {
+        get => (this.List(nameof(this.RssFeeds)) ?? [])
+            .Select(s => s.Split('|', 2))
+            .Where(p => p.Length == 2)
+            .Select(p => new RssFeed(p[0], p[1]))
+            .ToList();
+        set => this.Set(nameof(this.RssFeeds), value.Select(f => f.Url.Replace("|", "%7C") + "|" + f.Title).ToArray());
+    }
+
+    /// <summary>The RSS tab's chip: a feed's address, or "all".</summary>
+    public string? RssFilter
+    {
+        get => this.Text(nameof(this.RssFilter));
+        set => this.Set(nameof(this.RssFilter), value ?? "", notify: false);
+    }
+
     /// <summary>Open at login has been set up on a first launch. It only happens once.</summary>
     public bool LoginItemSetUp
     {
@@ -416,15 +458,192 @@ public sealed class AppSettings
         set => this.Set(nameof(this.LastTab), value, notify: false);
     }
 
-    string? Text(string key) => this.store.Get<string?>(key, null);
+    // ---------------------------------------------------------------------------------------------
+    // Backup and restore
+    // ---------------------------------------------------------------------------------------------
 
-    double Double(string key, double fallback) => this.store.Get(key, fallback);
+    /// <summary>
+    /// Left out of a backup: what you've made rather than chosen (tasks, the clipboard, the tape, the
+    /// tray's files - which name files on this computer only), and the app's own bookkeeping.
+    /// </summary>
+    static readonly HashSet<string> NotBackedUp =
+    [
+        nameof(Tasks), nameof(ClipboardHistory), nameof(CalculatorTape), nameof(TrayFiles),
+        nameof(LoginItemSetUp), nameof(SkippedUpdate), nameof(LastTab), nameof(WeatherSelected),
+        nameof(SportsFilter), nameof(SportsPinnedGame), nameof(NewsFilter), nameof(RssFilter),
+        nameof(MirrorCamera), nameof(VoiceNoteInput)
+    ];
 
-    bool Bool(string key, bool fallback) => this.store.Get(key, fallback);
+    /// <summary>What a key is stored as, learnt as each setting is read (see <see cref="StoredKinds"/>).</summary>
+    enum Kind { Text, Number, Flag, List }
+
+    readonly Dictionary<string, Kind> kinds = new();
+
+    /// <summary>
+    /// Every key a setting reads, with what it's stored as. The store can't list its keys, so each public
+    /// setting is read once and the helpers below note the keys they're asked for - a setting added
+    /// later is backed up without anyone remembering to list it.
+    /// </summary>
+    Dictionary<string, Kind> StoredKinds()
+    {
+        foreach (var property in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
+            property.GetValue(this);
+        return this.kinds.Where(k => !NotBackedUp.Contains(k.Key)).ToDictionary();
+    }
+
+    /// <summary>The backup format this version writes, and the newest it can read.</summary>
+    const int BackupFormat = 1;
+
+    /// <summary>Bigger than any real backup by far; anything this size isn't one.</summary>
+    public const long MaxBackupBytes = 4 * 1024 * 1024;
+
+    /// <summary>
+    /// The settings you've changed, as JSON: each stored key and its value as stored, with a SHA-256 of
+    /// them so a restore can tell the file hasn't been damaged or edited since.
+    /// </summary>
+    public string Export(DateTimeOffset now)
+    {
+        var values = new JsonObject();
+        foreach (var (key, kind) in this.StoredKinds().Where(k => this.store.Contains(k.Key)).OrderBy(k => k.Key, StringComparer.Ordinal))
+        {
+            values[key] = kind switch
+            {
+                Kind.Text => JsonValue.Create(this.Text(key)),
+                Kind.Number => JsonValue.Create(this.store.Get(key, 0d)),
+                Kind.Flag => JsonValue.Create(this.store.Get(key, false)),
+                _ => new JsonArray((this.List(key) ?? []).Select(v => (JsonNode?)JsonValue.Create(v)).ToArray())
+            };
+        }
+        var backup = new JsonObject
+        {
+            ["app"] = "Notcho",
+            ["format"] = BackupFormat,
+            ["created"] = now.ToString("O", CultureInfo.InvariantCulture),
+            ["checksum"] = Checksum(values),
+            ["settings"] = values
+        };
+        return backup.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>
+    /// Checks a backup through and through without changing anything: that it's a Notcho backup, in a
+    /// format this version reads, that its checksum matches its settings, and that every setting this
+    /// version knows holds a value of the kind it keeps there.
+    /// </summary>
+    /// <exception cref="FormatException">It isn't a backup this version can restore, and why.</exception>
+    public BackupContents Verify(string json)
+    {
+        JsonObject root;
+        try
+        {
+            root = JsonNode.Parse(json) as JsonObject ?? throw new FormatException("This isn't a Notcho settings backup.");
+        }
+        catch (JsonException ex)
+        {
+            throw new FormatException("This isn't a Notcho settings backup: it isn't valid JSON.", ex);
+        }
+
+        if (Text(root["app"]) != "Notcho" || root["settings"] is not JsonObject values)
+            throw new FormatException("This isn't a Notcho settings backup.");
+        if (root["format"] is not JsonValue formatValue || !formatValue.TryGetValue<int>(out var format) || format < 1)
+            throw new FormatException("This backup is damaged: it doesn't say which format it's in.");
+        if (format > BackupFormat)
+            throw new FormatException("This backup was made by a newer version of Notcho. Update Notcho, then restore it.");
+        if (Text(root["checksum"]) is not { } checksum || !checksum.Equals(Checksum(values), StringComparison.OrdinalIgnoreCase))
+            throw new FormatException("This backup is damaged or has been edited: its checksum doesn't match its settings.");
+
+        var known = this.StoredKinds();
+        var restorable = new Dictionary<string, JsonNode>();
+        var unknown = 0;
+        foreach (var (key, node) in values)
+        {
+            if (!known.TryGetValue(key, out var kind))
+            {
+                // A setting from a newer version, or one this version has retired: passed over.
+                unknown++;
+            }
+            else if (node == null || !IsKind(node, kind))
+            {
+                throw new FormatException($"This backup is damaged: the setting \"{key}\" doesn't hold the kind of value it should.");
+            }
+            else
+            {
+                restorable[key] = node;
+            }
+        }
+
+        var created = DateTimeOffset.TryParse(Text(root["created"]), CultureInfo.InvariantCulture, DateTimeStyles.None, out var at) ? at : (DateTimeOffset?)null;
+        return new BackupContents(restorable, unknown, created);
+    }
+
+    /// <summary>
+    /// Puts back a verified backup's settings, raising <see cref="Changed"/> for each, as changing it in
+    /// Settings would. Only ever given what <see cref="Verify"/> passed, so it can't stop half way.
+    /// </summary>
+    /// <returns>How many settings were restored.</returns>
+    public int Restore(BackupContents backup)
+    {
+        var known = this.StoredKinds();
+        foreach (var (key, node) in backup.Settings)
+        {
+            switch (known[key])
+            {
+                case Kind.Text:
+                    this.store.Set(key, node.GetValue<string>());
+                    break;
+                case Kind.Number:
+                    this.store.Set(key, node.GetValue<double>());
+                    break;
+                case Kind.Flag:
+                    this.store.Set(key, node.GetValue<bool>());
+                    break;
+                default:
+                    this.store.Set(key, node.AsArray().Select(v => v!.GetValue<string>()).ToArray());
+                    break;
+            }
+        }
+        foreach (var key in backup.Settings.Keys)
+            this.Changed?.Invoke(this, key);
+        return backup.Settings.Count;
+    }
+
+    static bool IsKind(JsonNode node, Kind kind) => kind switch
+    {
+        Kind.Text => node.GetValueKind() == JsonValueKind.String,
+        Kind.Number => node.GetValueKind() == JsonValueKind.Number,
+        Kind.Flag => node.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+        _ => node is JsonArray array && array.All(v => v?.GetValueKind() == JsonValueKind.String)
+    };
+
+    /// <summary>A string value, or null when it's missing or not a string.</summary>
+    static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+    /// <summary>SHA-256 of the settings as compact JSON, in hex.</summary>
+    static string Checksum(JsonObject values)
+        => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(values.ToJsonString())));
+
+    string? Text(string key)
+    {
+        this.kinds[key] = Kind.Text;
+        return this.store.Get<string?>(key, null);
+    }
+
+    double Double(string key, double fallback)
+    {
+        this.kinds[key] = Kind.Number;
+        return this.store.Get(key, fallback);
+    }
+
+    bool Bool(string key, bool fallback)
+    {
+        this.kinds[key] = Kind.Flag;
+        return this.store.Get(key, fallback);
+    }
 
     /// <summary>A list, or null when unset - or unreadable, which is no worse than unset for a tray or a place list.</summary>
     string[]? List(string key)
     {
+        this.kinds[key] = Kind.List;
         try
         {
             return this.store.Get<string[]?>(key, null);
@@ -454,3 +673,9 @@ public sealed class AppSettings
         "Use the speed and size buttons to tune it while you talk.\n\n" +
         "Hover away and the notch stays open while the script is running. Press pause to stop.";
 }
+
+/// <summary>A backup that passed <see cref="AppSettings.Verify"/>, ready to restore.</summary>
+/// <param name="Settings">The settings this version knows, each holding the right kind of value.</param>
+/// <param name="Unknown">Settings it holds that this version doesn't know, which are passed over.</param>
+/// <param name="Created">When it was made, when it says.</param>
+public sealed record BackupContents(IReadOnlyDictionary<string, JsonNode> Settings, int Unknown, DateTimeOffset? Created);

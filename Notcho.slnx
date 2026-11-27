@@ -1,8 +1,9 @@
 <Solution>
     <Folder Name="/.Solution/">
+        <File Path=".github\workflows\pages.yml" />
         <File Path=".github\workflows\release.yml" />
         <File Path="Directory.Build.props" />
-        <File Path="Directory.Build.targets" />
+        <File Path="Directory.Packages.props" />
         <File Path="global.json" />
         <File Path="LICENSE.md" />
         <File Path="NuGet.config" />

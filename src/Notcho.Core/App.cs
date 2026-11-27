@@ -48,13 +48,18 @@ public sealed class App : Application
             this.started = true;
             await this.notch.StartAsync();
             _ = this.SetUpLoginItemOnceAsync();
-            this.updates.Start();
 #if DEBUG
             // --open <Tab>: start with the panel pinned open on a tab, for driving the UI without a mouse.
+            // No update check then: a debug build is always out of date, and the update window opening
+            // folds the panel away (see NotchController.FoldAway).
             var args = Environment.GetCommandLineArgs();
             var i = Array.IndexOf(args, "--open");
             if (i >= 0 && i + 1 < args.Length && Enum.TryParse<Views.NotchTab>(args[i + 1], true, out var tab))
                 this.notch.OpenPinned(tab);
+            else
+                this.updates.Start();
+#else
+            this.updates.Start();
 #endif
         };
         return window;

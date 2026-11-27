@@ -137,7 +137,7 @@ sealed class SportsTab : VerticalStackLayout
 
     static string GameTitle(SportsGame? game) => game == null ? "" : $"{game.Away.Team.ShortName} at {game.Home.Team.ShortName}";
 
-    /// <summary>A chip with the league's logo, once a scoreboard has said what it is, before its short name.</summary>
+    /// <summary>A chip with the league's logo before its short name.</summary>
     /// <param name="text">What it says; the league's short name unless given.</param>
     View LeagueChip(SportsLeague league, bool selected, Action tapped, string? text = null)
     {

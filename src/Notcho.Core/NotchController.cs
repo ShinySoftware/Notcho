@@ -68,6 +68,8 @@ public sealed class NotchController
     readonly TeleprompterService prompter;
     readonly WeatherService weather;
     readonly SportsService sports;
+    readonly NewsService news;
+    readonly RssService rss;
     readonly VoiceNotesService notes;
     readonly TasksService tasks;
     readonly TaskEntry taskEntry;
@@ -129,6 +131,8 @@ public sealed class NotchController
         TeleprompterService prompter,
         WeatherService weather,
         SportsService sports,
+        NewsService news,
+        RssService rss,
         VoiceNotesService notes,
         TasksService tasks,
         TaskEntry taskEntry,
@@ -158,6 +162,8 @@ public sealed class NotchController
         this.prompter = prompter;
         this.weather = weather;
         this.sports = sports;
+        this.news = news;
+        this.rss = rss;
         this.notes = notes;
         this.tasks = tasks;
         this.taskEntry = taskEntry;
@@ -292,6 +298,8 @@ public sealed class NotchController
         };
         this.controls.ChangedExternally += (_, kind) => this.ShowHud(kind);
         this.weather.Changed += (_, _) => this.Rebuild(NotchTab.Weather);
+        this.news.Changed += (_, _) => this.Rebuild(NotchTab.News);
+        this.rss.Changed += (_, _) => this.Rebuild(NotchTab.Rss);
         this.sports.Changed += (_, _) =>
         {
             this.Rebuild(NotchTab.Sports);
@@ -542,6 +550,11 @@ public sealed class NotchController
         if (tab == NotchTab.Weather)
             _ = this.weather.RefreshAsync();
         // Like the calendar, coming back starts on today's scores.
+        // The stories are fetched when the tab opens (each feed only once it's ten minutes old).
+        if (tab == NotchTab.News)
+            _ = this.news.RefreshAsync();
+        if (tab == NotchTab.Rss)
+            _ = this.rss.RefreshAsync();
         if (tab == NotchTab.Sports)
         {
             this.sports.Reset();
@@ -799,6 +812,8 @@ public sealed class NotchController
             NotchTab.Media => new MediaTab(this.media),
             NotchTab.Weather => new WeatherTab(this.weather, () => this.OpenSettings?.Invoke()),
             NotchTab.Sports => new SportsTab(this.sports, () => this.OpenSettings?.Invoke()),
+            NotchTab.News => new FeedTab(this.news, "News", "newspaper.fill", Ui.Red, "Pick your news networks and the categories you want, like World, Politics or Sports.", () => this.OpenSettings?.Invoke(), this.time),
+            NotchTab.Rss => new FeedTab(this.rss, "RSS", "dot.radiowaves.up.forward", Ui.Orange, "Add the feeds you follow: a blog, a podcast, a site's news. Paste a feed's address or just the site's.", () => this.OpenSettings?.Invoke(), this.time),
             NotchTab.Tray => this.BuildTray(),
             NotchTab.Stats => new StatsTab(this.stats),
             NotchTab.Processes => new ProcessesTab(this.processes),
@@ -945,6 +960,12 @@ public sealed class NotchController
             this.nextWeatherCheck = now + WeatherCheckEvery;
             _ = this.weather.RefreshAsync();
         }
+
+        // Stories too, while their tab shows: each feed is fetched again once it's ten minutes old.
+        if (this.mode == Mode.Panel && this.tab == NotchTab.News)
+            _ = this.news.RefreshAsync();
+        if (this.mode == Mode.Panel && this.tab == NotchTab.Rss)
+            _ = this.rss.RefreshAsync();
 
         // Scores refresh themselves when stale; only asked while they show, or a game is picked for the
         // closed notch. Every 20 seconds while one is on (see PollSports); the minute is plenty otherwise.

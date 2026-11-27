@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Notcho</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Notcho Notcho Man! Notcho piles your MacBook's camera notch high with music, weather, sports scores, timers, files, notes and more. We got all the fixins, one hover away.">
+<meta name="description" content="Notcho Notcho Man! Notcho piles your MacBook's camera notch high with music, weather, sports scores, the news, your RSS feeds, timers, files, notes and more. We got all the fixins, one hover away.">
 <meta name="theme-color" content="#140a05">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Notcho: Notcho Notcho Man. We got all the fixins.">
-<meta property="og:description" content="Music, weather, timers, files, notes and your calendar, piled high in your MacBook's camera notch. One hover away.">
+<meta property="og:description" content="Music, weather, sports scores, the news, timers, files, notes and your calendar, piled high in your MacBook's camera notch. One hover away.">
 <meta property="og:url" content="https://shinysoftware.github.io/Notcho/">
 <meta property="og:image" content="https://shinysoftware.github.io/Notcho/assets/social-card.png?v=2">
 <meta property="og:image:width" content="1200">
@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Lilita+One&family=Monoton&family=Pacifico&family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.4.2">
+<link rel="stylesheet" href="styles.css?v=1.4.4">
 </head>
 <body>
 
@@ -132,7 +132,7 @@
       <p class="eyebrow reveal"><span class="pulse-dot"></span>For MacBooks with a camera notch · macOS 14+</p>
       <h1 class="hero-title" id="heroTitle">Notcho Notcho <em>Man!</em></h1>
       <p class="slogan reveal">We got all the <span class="fixins">“fixins”</span>.</p>
-      <p class="hero-sub reveal">Notcho piles the black strip around your camera high with what's playing, the weather, your teams' scores, timers, files, notes, your calendar and more, one hover away. The notch at the top of this page is the real recipe. Go on, take a bite.</p>
+      <p class="hero-sub reveal">Notcho piles the black strip around your camera high with what's playing, the weather, your teams' scores, the news, timers, files, notes, your calendar and more, one hover away. The notch at the top of this page is the real recipe. Go on, take a bite.</p>
       <div class="hero-ctas reveal">
         <a class="btn btn-primary magnetic" href="https://github.com/ShinySoftware/Notcho/releases/latest" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -169,7 +169,7 @@
   <section class="features" id="features">
     <div class="wrap">
       <div class="section-head reveal">
-        <p class="eyebrow">Fifteen fixins, one hover</p>
+        <p class="eyebrow">Eighteen fixins, one hover</p>
         <h2>Everything you glance at,<br><em>piled under the camera.</em></h2>
         <p class="lede">Each card opens that tab in the notch above, so you can taste it here instead of reading the menu. Don't like jalapeños? Turn off the tabs you don't use in Settings and the rest spread out.</p>
       </div>
@@ -218,7 +218,7 @@
             </div>
           </div>
           <h3>The peek</h3>
-          <p>Closed, the notch shows a wing either side of the camera: what's playing, any system readings, and a running timer, a meeting in the next 15 minutes or the weather. It splits them so both sides stay even. With click to open on, add previous, play/pause and next buttons right there. With nothing to show, it disappears into the camera.</p>
+          <p>Closed, the notch shows a wing either side of the camera: what's playing, any system readings, a live score from a game you pick, a cup while Keep Awake is on, and a running timer, a meeting in the next 15 minutes or the weather. It splits them so both sides stay even. With click to open on, add previous, play/pause and next buttons right there. With nothing to show, it disappears into the camera.</p>
         </article>
 
         <article class="card c-tray tilt reveal" data-tab="tray">
@@ -254,6 +254,23 @@
           <button class="try" type="button" data-open-tab="awake">Stay awake <span>↑</span></button>
         </article>
 
+        <article class="card small tilt reveal" data-tab="news">
+          <span class="badge" style="--c:#FF453A" data-ic="newspaper"></span>
+          <h3>News</h3>
+          <p>Headlines from the networks you pick (CBC, CTV, Global, CNN, Fox News, NBC, CBS, NPR, BBC, The Guardian, Al Jazeera), a chip per category. Click one to read it on their site.</p>
+          <button class="try" type="button" data-open-tab="news">Read the headlines <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal" data-tab="rss">
+          <span class="badge" style="--c:#FF9F0A" data-ic="rss"></span>
+          <h3>RSS</h3>
+          <p>The blogs, podcasts and sites you follow. Paste a feed, or just the site's address, and Notcho finds the feed.</p>
+          <button class="try" type="button" data-open-tab="rss">See your feeds <span>↑</span></button>
+        </article>
+        <article class="card small tilt reveal">
+          <span class="badge" style="--c:#64D2FF" data-ic="hard-drive-download"></span>
+          <h3>Backup &amp; restore</h3>
+          <p>Save your settings to a file wherever you like, and restore them on any Mac. Every backup is checked before anything changes. Settings is tidied into categories, with the logo pinned on top.</p>
+        </article>
         <article class="card small tilt reveal" data-tab="tasks">
           <span class="badge" style="--c:#30D158" data-ic="list-checks"></span>
           <h3>Tasks</h3>
@@ -307,6 +324,12 @@
           <h3>Capture</h3>
           <p>One-click shortcuts into macshot: area, screen, scrolling, text and recording. The notch folds away first.</p>
           <button class="try" type="button" data-open-tab="capture">Grab the screen <span>↑</span></button>
+        </article>
+        <article class="card small c-style tilt reveal">
+          <span class="badge" style="--c:#D99A0B" data-ic="palette"></span>
+          <h3>Colours &amp; frosted glass</h3>
+          <p>Black like the camera, one colour, a gradient or frosted glass, for the closed notch and the open panel each. Pick Guacamole, Nacho Cheese, Salsa and friends, or any hex. On a Mac, the glass blurs what's behind it.</p>
+          <div class="swatches" aria-hidden="true"><i style="--c:#4C7F14"></i><i style="--c:#D99A0B"></i><i style="--c:#D9590B"></i><i style="--c:#C62A1F"></i><i style="--c:#B0245A"></i><i style="--c:#6A2BB0"></i><i style="--c:#4A2412"></i><i class="frost"></i></div>
         </article>
         <article class="card c-hud tilt reveal">
           <div class="viz viz-hud" aria-hidden="true">
@@ -505,6 +528,6 @@
 <div class="rain" id="rain" aria-hidden="true"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
-<script src="app.js?v=1.4.2"></script>
+<script src="app.js?v=1.4.4"></script>
 </body>
 </html>

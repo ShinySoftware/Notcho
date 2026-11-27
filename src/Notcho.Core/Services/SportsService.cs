@@ -48,7 +48,6 @@ public sealed class SportsService
     readonly Dictionary<string, LeagueStandings> tables = new();
     readonly Dictionary<string, TeamSchedule> schedules = new();
     readonly Dictionary<string, (IReadOnlyList<SportsTeam> Teams, DateTime FetchedUtc)> teams = new();
-    readonly Dictionary<string, string> leagueLogos = new();
     readonly Dictionary<string, byte[]> logos = new();
     readonly Dictionary<string, Task<byte[]?>> logoLoads = new();
     readonly string logoFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Notcho", "Logos");
@@ -252,8 +251,8 @@ public sealed class SportsService
 
     public Scoreboard? Board(string league, DateTime day) => this.boards.GetValueOrDefault(BoardKey(league, day));
 
-    /// <summary>The league's own logo, once any of its scoreboards has said what it is.</summary>
-    public string? LeagueLogo(string league) => this.leagueLogos.GetValueOrDefault(league);
+    /// <summary>The league's own logo.</summary>
+    public string? LeagueLogo(string league) => SportsLeague.Find(league)?.Logo;
 
     /// <summary>
     /// The day's games for the chip, a section per league: with your teams, only their games; with a
@@ -514,20 +513,17 @@ public sealed class SportsService
             var games = root.TryGetProperty("events", out var events)
                 ? events.EnumerateArray().Select(e => ParseGame(e, league)).OfType<SportsGame>().ToList()
                 : [];
-            var logo = root.TryGetProperty("leagues", out var leagues) && leagues.GetArrayLength() > 0 ? DarkLogo(leagues[0]) : null;
-            return new Scoreboard(league, day, games, logo, this.UtcNow);
+            return new Scoreboard(league, day, games, this.UtcNow);
         }).ConfigureAwait(true);
 
         if (board == null)
         {
             // Keep what was there to show; only mark it to be tried again soon.
-            this.boards[key] = (old ?? new Scoreboard(league, day, [], null, this.UtcNow)) with { FetchedUtc = this.UtcNow, Failed = true };
+            this.boards[key] = (old ?? new Scoreboard(league, day, [], this.UtcNow)) with { FetchedUtc = this.UtcNow, Failed = true };
             return old == null;
         }
 
         this.boards[key] = board;
-        if (board.Logo != null)
-            this.leagueLogos[league] = board.Logo;
         return old == null || old.Failed || !old.Games.Select(g => g.Signature).SequenceEqual(board.Games.Select(g => g.Signature));
     }
 
@@ -634,7 +630,13 @@ public sealed class SportsService
         return list;
     }
 
-    /// <summary>Teams in the followed leagues whose name or abbreviation has <paramref name="query"/> in it.</summary>
+    /// <summary>Fetches the followed leagues' team lists, so a search right after has them to hand.</summary>
+    public Task PreloadTeamsAsync() => Task.WhenAll(this.settings.SportsLeagues.Select(this.TeamsAsync));
+
+    /// <summary>
+    /// Teams in the followed leagues matching <paramref name="query"/>, best first: the abbreviation
+    /// exactly, then a name that starts with it, then one with a word that does, then any name with it in.
+    /// </summary>
     public async Task<IReadOnlyList<SportsTeam>> SearchTeamsAsync(string query)
     {
         var text = query.Trim();
@@ -643,9 +645,25 @@ public sealed class SportsService
 
         var all = await Task.WhenAll(this.settings.SportsLeagues.Select(this.TeamsAsync)).ConfigureAwait(true);
         return all.SelectMany(t => t)
-            .Where(t => t.Name.Contains(text, StringComparison.OrdinalIgnoreCase) || t.Abbreviation.Equals(text, StringComparison.OrdinalIgnoreCase))
-            .Take(12)
+            .Select(t => (Team: t, Rank: MatchRank(t, text)))
+            .Where(m => m.Rank >= 0)
+            .OrderBy(m => m.Rank)
+            .ThenBy(m => m.Team.Name)
+            .Take(10)
+            .Select(m => m.Team)
             .ToList();
+    }
+
+    /// <summary>How well a team matches what's typed: lower is better, -1 not at all.</summary>
+    static int MatchRank(SportsTeam team, string text)
+    {
+        if (team.Abbreviation.Equals(text, StringComparison.OrdinalIgnoreCase))
+            return 0;
+        if (team.Name.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+            return 1;
+        if (team.Name.Contains(" " + text, StringComparison.OrdinalIgnoreCase))
+            return 2;
+        return team.Name.Contains(text, StringComparison.OrdinalIgnoreCase) ? 3 : -1;
     }
 
     /// <summary>GETs and parses JSON; null on any failure (offline, a timeout, a shape ESPN changed).</summary>

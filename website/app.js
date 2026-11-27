@@ -1,4 +1,4 @@
-/* Notcho, the browser copy. Peek, panel and HUD modes, fifteen tabs, the controls bar,
+/* Notcho, the browser copy. Peek, panel and HUD modes, eighteen tabs, the controls bar,
    the quick entry popup and Settings, plus the site's own animations at the bottom. */
 (() => {
   'use strict';
@@ -67,6 +67,8 @@
     { id: 'media', icon: 'music', name: 'Now Playing', c: '#FF375F', side: 'l' },
     { id: 'weather', icon: 'cloud-sun', name: 'Weather', c: '#64D2FF', side: 'l' },
     { id: 'sports', icon: 'trophy', name: 'Sports', c: '#30D158', side: 'l' },
+    { id: 'news', icon: 'newspaper', name: 'News', c: '#FF453A', side: 'l' },
+    { id: 'rss', icon: 'rss', name: 'RSS', c: '#FF9F0A', side: 'l' },
     { id: 'tray', icon: 'inbox', name: 'File Tray', c: '#30D158', side: 'l' },
     { id: 'stats', icon: 'cpu', name: 'System', c: '#BF5AF2', side: 'l' },
     { id: 'processes', icon: 'layers', name: 'Processes', c: '#5E5CE6', side: 'l' },
@@ -370,6 +372,61 @@
       const today = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' });
       return `<div class="stack">${head}<div class="sp-day"><button class="n-icon" type="button" data-act="spDay" aria-label="Previous day">${ic('chevron-left')}</button><b>Today <span class="n-ter">${today}</span></b><button class="n-icon" type="button" data-act="spDay" aria-label="Next day">${ic('chevron-right')}</button></div>
         <div class="sp-grid">${games.map(spCard).join('')}</div></div>`;
+    }
+  };
+
+  // ======================================================================
+  //  NEWS + RSS
+  //  Made-up networks and headlines: the real tab reads the networks you pick (CBC, BBC, Fox News…).
+  // ======================================================================
+  const min = n => Date.now() - n * 60e3;
+  const NW_SOURCES = { nacho: ['Nacho Daily', '#ff453a'], salsa: ['Salsa Times', '#64d2ff'], queso: ['Queso Wire', '#ffd60a'] };
+  const NW_STORIES = {
+    top: [
+      ['queso', 'City council votes to make Taco Tuesday a civic holiday', 'The motion passed 9 to 2 after a lengthy debate over whether Wednesday deserved a turn.', 4],
+      ['nacho', 'Record crowds line up for the first guacamole of the season', 'Growers say the avocado harvest is the best in a decade, and the lines agree.', 18],
+      ['salsa', 'Hot sauce shortage eases as new peppers reach shelves', 'Restaurants that rationed their bottles all summer can finally stop counting drops.', 41],
+      ['queso', 'Local band plays a three-hour set entirely in kazoo', 'Fans called it brave. Neighbours called it something else.', 66],
+      ['nacho', 'Study finds snacks taste better when shared, surprising nobody', 'Researchers say the effect doubles when the snack is nachos.', 130]
+    ],
+    world: [
+      ['salsa', 'Summit agrees on a standard size for tortilla chips', 'Delegates spent two days on the question of the perfect scoop.', 9],
+      ['nacho', 'Festival of chillies draws visitors from forty countries', 'The hottest pepper on show was handled with tongs and great respect.', 37],
+      ['queso', 'Cheese exports climb for the fifth straight month', 'Analysts credit a global craving for anything that melts.', 92]
+    ],
+    tech: [
+      ['salsa', 'New laptops put a live panel around the camera', 'The notch, once a nuisance, is quietly becoming the busiest pixels on the screen.', 12],
+      ['queso', 'Phone makers race to put more cheese in the camera bump', 'Not literally. Probably.', 75]
+    ]
+  };
+  const NW = { filter: 'top' };
+  const RSS_FEEDS = [['chips', 'The Chip Blog'], ['dip', 'Dip of the Day']];
+  const RSS_STORIES = [
+    ['dip', 'Seven-layer dip, ranked layer by layer', 'Beans make a strong showing. Olives remain divisive.', 25],
+    ['chips', 'Why the corner chip is always the best chip', 'More crunch, more seasoning, more joy. A short essay.', 180],
+    ['dip', 'Is queso a dip or a lifestyle?', 'We asked around. Nobody wanted to answer.', 300],
+    ['chips', 'Baked or fried: an honest taste test', 'Spoiler: we ate both bowls before taking notes.', 1440]
+  ];
+  const RS = { filter: 'all' };
+  function feedRow(source, color, t, summary, minsAgo) {
+    return `<div class="list-row nw-row"><div class="grow"><div class="nw-meta"><b style="color:${color}">${esc(source)}</b><span>${ago(min(minsAgo))} ago</span></div>
+      <div class="nw-title">${esc(t)}</div><div class="nw-sum ell">${esc(summary)}</div></div></div>`;
+  }
+  const feedChip = (act, cur, id, label) => `<button class="sp-chip${cur === id ? ' on' : ''}" type="button" data-act="${act}" data-id="${id}">${label}</button>`;
+  const feedFoot = '<p class="n-ter" style="margin:8px 2px 0;font-size:12px">In the app, a click opens the story in your browser.</p>';
+  const newsView = {
+    html() {
+      const chips = [['top', 'Top Stories'], ['world', 'World'], ['tech', 'Technology']].map(([id, l]) => feedChip('nwFilter', NW.filter, id, l)).join('');
+      const rows = NW_STORIES[NW.filter].map(([src, t, sum, m]) => feedRow(NW_SOURCES[src][0], NW_SOURCES[src][1], t, sum, m)).join('');
+      return `<div class="row" style="gap:6px;margin-bottom:10px">${chips}</div><div class="n-card nw-list">${rows}</div>${feedFoot}`;
+    }
+  };
+  const rssView = {
+    html() {
+      const chips = [['all', 'All'], ...RSS_FEEDS].map(([id, l]) => feedChip('rsFilter', RS.filter, id, l)).join('');
+      const rows = RSS_STORIES.filter(([f]) => RS.filter === 'all' || RS.filter === f)
+        .map(([f, t, sum, m]) => feedRow(RSS_FEEDS.find(x => x[0] === f)[1], '#ff9f0a', t, sum, m)).join('');
+      return `<div class="row" style="gap:6px;margin-bottom:10px">${chips}</div><div class="n-card nw-list">${rows}</div>${feedFoot}`;
     }
   };
 
@@ -1134,7 +1191,7 @@
   };
 
   const VIEWS = {
-    media: mediaView, weather: weatherView, sports: sportsView, tray: trayView, stats: statsView, processes: procView, capture: captureView,
+    media: mediaView, weather: weatherView, sports: sportsView, news: newsView, rss: rssView, tray: trayView, stats: statsView, processes: procView, capture: captureView,
     mirror: mirrorView, notes: notesView, tasks: tasksView, clipboard: clipView, calendar: calView, timer: timerView,
     awake: awakeView, calculator: calcView, prompter: prompterView
   };
@@ -1325,6 +1382,8 @@
     mNext: () => mediaSkip(1),
     mScrub: (b, e) => { const r = b.getBoundingClientRect(); M.pos = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * (track().d - 1)); refresh(); },
     spFilter: b => { SP.filter = b.dataset.id; refresh(); },
+    nwFilter: b => { NW.filter = b.dataset.id; refresh(); },
+    rsFilter: b => { RS.filter = b.dataset.id; refresh(); },
     spPage: b => { SP.page = b.dataset.id; refresh(); },
     spGame: b => { SP.game = Number(b.dataset.id); SP.page = 'game'; refresh(); },
     spBack: () => { SP.page = 'scores'; refresh(); },
